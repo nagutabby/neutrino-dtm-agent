@@ -37,10 +37,10 @@ case "$REAL" in "$ROOT"/projects/*) ;; *) die "projects/ 配下のファイル�
 case "$REAL" in
   *.mid|*.midi)
     [ -n "${SOUNDFONT:-}" ] && [ -f "$SOUNDFONT" ] || die "SOUNDFONT が未設定です(.env)"
-    command -v fluidsynth >/dev/null || die "fluidsynth がありません(brew install fluid-synth)"
+    [ "$DRY_RUN" = 1 ] || command -v fluidsynth >/dev/null || die "fluidsynth がありません(brew install fluid-synth)"
     run fluidsynth -ni "$SOUNDFONT" "$REAL" ;;
   *.wav|*.mp3|*.flac|*.m4a)
-    command -v mpv >/dev/null || die "mpv がありません(brew install mpv)"
+    [ "$DRY_RUN" = 1 ] || command -v mpv >/dev/null || die "mpv がありません(brew install mpv)"
     ARGS=(--no-video)
     [ -z "$START" ] || ARGS+=("--start=$START")
     [ "$LOOP" = 0 ] || ARGS+=(--loop-file=inf)
