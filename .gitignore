@@ -17,10 +17,8 @@ projects/*/stems/
 projects/*/mix/
 *.wav
 
-# 参考曲(私的分析用。音声・書き起こしは公開しない)
-projects/*/reference/*/audio.*
-projects/*/reference/*/stems/
-projects/*/reference/*/transcription*.mid
+# 参考曲(私的分析用。音声・書き起こし・分析結果・出典を含め丸ごと追跡しない)
+projects/*/reference/
 *.f0
 *.melspec
 !tests/fixtures/**/*.wav

@@ -15,6 +15,8 @@ spec 立案 → 承認 → 生成(approved のみ) → 検証 → 提示(単体+
 7. ボーカル: 歌詞付き MusicXML(`midi_to_musicxml.sh` → `lyrics_inject.py` → `musicxml_validate.py`)→ `synth.sh`
 8. 修正は必ず spec から(`spec-revise` → `spec-regenerate`)。`spec_check.py` で stale を確認
 
+試聴: `scripts/play.sh <path> [--start 秒] [--loop]`(音声は mpv、MIDI は fluidsynth)、`scripts/play.sh --list <song>` で一覧。
+
 ディレクトリ: `spec/ tracks/ stems/ mix/ musicxml/ label/{full,mono,timing}/ output/ notes.md approved.json`
 トラックの番号は spec の番号(03 drums / 04 bass / 05 chords / 06 melody / 08 vocal)。
 

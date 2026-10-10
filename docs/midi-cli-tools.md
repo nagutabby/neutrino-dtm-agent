@@ -9,4 +9,4 @@
 | **FluidSynth** | CLI | 非常に安定。Homebrew `fluid-synth` | 試聴用レンダリング(**採用**) |
 | midish | CLI シーケンサ | 枯れているが macOS/Homebrew での入手性は未確認 | 対話的編集(任意・未検証) |
 
-導入: `brew install fluid-synth ffmpeg midicsv shellcheck`、`brew install --cask musescore`(後者は未導入。インストールはユーザー確認の上で)。
+導入: `brew install fluid-synth ffmpeg mpv midicsv shellcheck`、`brew install --cask musescore`(後者は未導入。インストールはユーザー確認の上で)。

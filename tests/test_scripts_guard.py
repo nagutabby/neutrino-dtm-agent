@@ -38,3 +38,24 @@ def test_reference_fetch_rejects_non_youtube_url():
         assert r.returncode != 0 and "YouTube" in r.stderr
     finally:
         (ROOT / "projects" / "_guardtest").rmdir()
+
+
+def test_play_rejects_files_outside_projects():
+    r = run("scripts/play.sh", "/etc/hosts")
+    assert r.returncode != 0 and "projects/" in r.stderr
+
+
+def test_play_dry_run_builds_mpv_command():
+    d = ROOT / "projects" / "_playtest"
+    d.mkdir(exist_ok=True)
+    f = d / "a.wav"
+    f.write_bytes(b"RIFF")
+    try:
+        r = run("scripts/play.sh", str(f), "--start", "12.5", "--loop", "--dry-run")
+        assert r.returncode == 0
+        assert "--start=12.5" in r.stdout and "--loop-file=inf" in r.stdout
+        bad = run("scripts/play.sh", str(f), "--start", "x")
+        assert bad.returncode != 0 and "数字" in bad.stderr
+    finally:
+        f.unlink()
+        d.rmdir()

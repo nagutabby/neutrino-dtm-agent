@@ -31,5 +31,8 @@ uv run scripts/spec_check.py mysong       # spec と生成物の整合性
 ## 免責
 NEUTRINO は STUDIO NEUTRINO の製品です。本リポジトリは非公式の補助ツールです。
 
+## 聴く
+`scripts/play.sh <path>`(`projects/` 配下の wav / mp3 / MIDI。`--list <曲名>` で一覧)。mpv が必要: `brew install mpv`。
+
 ## 参考曲から雰囲気をつかむ
 `/reference <曲名> <YouTube URL>` で参考曲を分析し、テンポ・キー・コード機能などから曲のイメージを言葉にします。詳細と注意は `docs/reference-analysis.md`。

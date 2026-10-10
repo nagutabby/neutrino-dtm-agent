@@ -30,7 +30,7 @@
 1. **予告**: 何を作るかを1行で伝える。
 2. **生成**: approved spec から。案は最大3。版は `v1, v2…` で保存し、旧版は消さない。
 3. **検証**: バリデータを通す。エラーは「何が/なぜ/直し方」を日本語で伝える。黙って直さない。
-4. **提示**: トラック**単体**の試聴物と、Step 1〜N の**累積ミックス**の2本。パスと聴きどころ(何秒付近の何に注目)を示す。
+4. **提示**: トラック**単体**の試聴物と、Step 1〜N の**累積ミックス**の2本。パスと聴きどころ(何秒付近の何に注目)を示し、**そのまま貼れる再生コマンド**(`! scripts/play.sh <path> [--start 秒]`)を添える。
 5. **技術解説(必須)**: なぜそう聞こえるかを、**音楽理論(度数・コード機能・終止・声部連結・コードトーンなど)**と、音域・ベロシティ・ノート長・拍の位置・音色・パン・音量・StyleShift などの**数値付き**で説明する。累積ミックスでは前のトラックとのかみ合わせも説明する。理論は `docs/music-theory.md`、数値の辞書は `docs/technique-notes.md` を参照。理論用語は初出時に括弧で補い、一度に出すのは最大2つ。
 6. **承認ゲート**: `AskUserQuestion` で「採用 / 修正 / やり直し / 自分で直す」を確認する。**承認前は次のトラックに進まない・ミックスを確定しない**。
 7. **記録**: 承認内容と学んだ技術を `notes.md` に追記。承認は `scripts/approve.py` で記録する(ユーザーが承認すると発言した後にのみ実行)。
@@ -52,6 +52,14 @@
 
 - NEUTRINO 本体は `NEUTRINO_DIR`(既定 `~/NEUTRINO`)。**読み取り専用で、書き込まない**。出力は常に `projects/<song>/output/`。
 - 詳細: `docs/neutrino-cli.md`、`docs/midi-musicxml-rules.md`、`docs/workflow.md`。
+
+## 試聴(CLI)
+
+- 音を聴くのは `scripts/play.sh`(音声は `mpv`、MIDI は `fluidsynth`)。操作: スペース=一時停止、←→=5秒移動、q=終了。
+- `scripts/play.sh <path> [--start 秒] [--loop]`(`projects/` 配下のみ。`--dry-run` で確認)、`scripts/play.sh --list <song>` で聴けるファイルを一覧。
+- エージェントは **再生コマンドを提示する**(ユーザーが `!` を付けて実行する)。ユーザーが「再生して」と頼んだときだけ、`run_in_background` で実行し、長時間フォアグラウンドで止めない。聴いた感想を必ず聞く(`coach-review`)。
+- 聴きどころは「何秒付近の何」を `--start` 付きコマンドで示す。A/B 比較は2本のコマンドを並べて提示する。
+- 音声は聴けない前提で判断しない。エージェント自身は聴けないので、感想の代わりに数値(`explain_midi.py`)を根拠にし、聴感の判断はユーザーに委ねる。
 
 ## 制約(厳守)
 
@@ -77,4 +85,4 @@
 ## 開発メモ
 
 - Python は `uv`。`uv sync` → `uv run pytest` → `uv run ruff check .`。シェルは `shellcheck scripts/*.sh`。
-- 外部ツール: `fluidsynth`(試聴)、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。
+- 外部ツール: `mpv`(音声の試聴)、`fluidsynth`(MIDI の試聴・wav 化)、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。
