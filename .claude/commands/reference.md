@@ -7,7 +7,7 @@ argument-hint: "<曲名> <YouTubeのURL>"
 
 1. 最初に `docs/reference-analysis.md` の注意(私的な分析のみ・複製しない・公開しない)を1〜2行で伝える。対象は YouTube の単体動画(10 分以内)。
 2. `projects/<song>/` が無ければ `/new-song` を先に案内する。
-3. `scripts/reference_run.sh <song> <url> --dry-run` で確認 → 実行(音声取得 → MIDI 書き起こし → 分析)。初回は数十秒〜数分かかる。
+3. `scripts/reference_run.sh <song> <url> --dry-run` で確認 → 実行(音声取得 → 音源分離 → MIDI 書き起こし → 分析)。初回は数十秒〜数分かかる。
 4. `projects/<song>/reference/<id>/analysis.md` を読み、次の3点で報告する:
    - **わかったこと**: テンポ・キー(長調/短調)・コード機能の並び・盛り上がりの形・音の明るさ・刻みの細かさを、`docs/music-theory.md` の理論で平易に(初出用語は最大2つ、数値付き)。
    - **聴きどころ**: ユーザーが参考曲を聴き直して確かめる箇所(何秒付近)。推定の限界(テンポの倍/半分違い、コード推定の取り違え、書き起こしの不完全さ)を正直に伝える。

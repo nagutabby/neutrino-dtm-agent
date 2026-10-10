@@ -1,22 +1,36 @@
-# 参考曲の分析(YouTube → 音声 → MIDI → 雰囲気の言語化)
+# 参考曲の分析(YouTube → 音声 → 音源分離 → MIDI → 雰囲気の言語化)
 
 目的: 「こんな雰囲気の曲を作りたい」を、参考曲の**抽象的な特徴**に翻訳して `spec` に反映する。コーチの対話の材料であり、曲をまねるための機能ではない。
 
 ## 使い方
 `/reference <song> <YouTube URL>`、または `scripts/reference_run.sh <song> <url>`。
-`scripts/reference_run.sh` は次の3段階を順に実行する(個別実行も可):
+`scripts/reference_run.sh` は次の4段階を順に実行する(個別実行も可):
 
 | 段階 | スクリプト | 出力(`projects/<song>/reference/<video-id>/`) |
 |---|---|---|
 | 取得 | `reference_fetch.sh` | `audio.wav`、`source.json`(タイトル等) |
-| 書き起こし | `reference_to_midi.py`(Basic Pitch / ONNX) | `transcription.mid` |
+| 音源分離 | `reference_separate.py`(Demucs htdemucs) | `stems/{drums,bass,other,vocals}.wav` |
+| 書き起こし | `reference_to_midi.py`(Basic Pitch / ONNX) | `transcription_{bass,other,vocals}.mid`(分離なしなら `transcription.mid`) |
 | 分析 | `reference_analyze.py`(librosa) | `analysis.json`、`analysis.md` |
 
+音源分離は初回にモデル(約80MB)を取得する。CPU で曲の長さの0.5〜1倍ほどかかる。省く場合は `REF_SEPARATE=0`。
 必要なもの: `brew install yt-dlp ffmpeg`。Python 依存は `uv sync --group reference`(`uv run --group reference` で自動)。
 
 ## 分析する特徴
 テンポ / キー(長調・短調)/ 小節ごとのコード(ローマ数字=機能で表示。短調は平行長調基準)/ 盛り上がりの形(8分割の音量)/ 音の明るさ / 刻みの細かさ / 書き起こし MIDI の音域・密度。
 旋律・歌詞・音符列そのものは出力しない。
+
+## 音源分離の効果(合成音源での検証)
+正解の分かる16小節(C-G-Am-F ×4、100 BPM、ドラム・ベース・ピアノ・メロディ)で比較した結果:
+
+| 項目 | 分離なし | 分離あり |
+|---|---|---|
+| コード(小節ごと、位置ずれ許容) | 14/16。Am の重複など進行が乱れる | **16/16**。C-G-Am-F が全周で一致 |
+| テンポ | 99.4 BPM | 99.4 BPM(正解100) |
+| キー | C 長調 | A 短調(平行調。ローマ数字の基準は同じ) |
+
+分離ありのコード推定は、**根音をベースのパート、長調/短調を和音パート(other)の3度**から決める。ベースの倍音(5倍音=長3度)に惹かれて A を A(長)と誤る問題を避けるため。
+ベースの MIDI 書き起こしは分離しても低域で不安定(音が抜ける)。しきい値を下げると増えるのは多くがノイズで、採用していない。**MIDI は傾向把握用、コードの根拠は音声のクロマ**と考える。実際の楽曲(実楽器・歌入り・転調)での精度は未検証。
 
 ## 精度の限界(必ずユーザーに伝える)
 - 複数楽器が混ざった音声の書き起こしは不完全。MIDI は音域や密度の傾向を見る目安。

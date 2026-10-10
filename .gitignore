@@ -19,7 +19,8 @@ projects/*/mix/
 
 # 参考曲(私的分析用。音声・書き起こしは公開しない)
 projects/*/reference/*/audio.*
-projects/*/reference/*/transcription.mid
+projects/*/reference/*/stems/
+projects/*/reference/*/transcription*.mid
 *.f0
 *.melspec
 !tests/fixtures/**/*.wav

@@ -22,3 +22,28 @@ def test_ref_id_rejects_path_escape(tmp_path):
 
     with pytest.raises(SystemExit):
         common.safe_ref_dir(tmp_path, "../x")
+
+
+def test_separate_requires_audio(song, monkeypatch):
+    import sys
+
+    import reference_separate
+
+    (song / "reference" / "abc").mkdir(parents=True)
+    monkeypatch.setattr(sys, "argv", ["reference_separate.py", "demo", "abc"])
+    with pytest.raises(SystemExit, match="音声がありません"):
+        reference_separate.main()
+
+
+def test_separate_refuses_overwrite(song, monkeypatch):
+    import sys
+
+    import reference_separate
+
+    d = song / "reference" / "abc"
+    (d / "stems").mkdir(parents=True)
+    (d / "audio.wav").write_bytes(b"")
+    (d / "stems" / "bass.wav").write_bytes(b"")
+    monkeypatch.setattr(sys, "argv", ["reference_separate.py", "demo", "abc"])
+    with pytest.raises(SystemExit, match="既に存在"):
+        reference_separate.main()

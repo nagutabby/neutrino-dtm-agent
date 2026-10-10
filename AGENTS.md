@@ -67,7 +67,7 @@
 
 ## コマンド(`.claude/commands/`)
 
-`/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → MIDI 書き起こし → 雰囲気分析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
+`/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → MIDI 書き起こし → 雰囲気分析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
 `/new-song [曲名]`: 環境確認 → 3問ヒアリング → `projects/<song>/` 作成 → concept 承認 まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)
