@@ -47,3 +47,13 @@ def test_separate_refuses_overwrite(song, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["reference_separate.py", "demo", "abc"])
     with pytest.raises(SystemExit, match="既に存在"):
         reference_separate.main()
+
+
+def test_diatonic_fit_prefers_major_when_tonic_chord_is_major():
+    chords = [(9, ""), (2, ""), (9, ""), (2, "")]  # A, D, A, D
+    assert ra.diatonic_fit(chords, 9, "長調") > ra.diatonic_fit(chords, 9, "短調")
+
+
+def test_ambiguous_third_matches_either_quality():
+    assert ra.diatonic_fit([(0, "5")], 0, "長調") == 1.0
+    assert ra.diatonic_fit([(0, "5")], 9, "短調") == 1.0

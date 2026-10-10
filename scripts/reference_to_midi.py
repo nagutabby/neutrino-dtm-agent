@@ -16,6 +16,13 @@ import sys
 from common import require_project, safe_ref_dir
 
 
+def _rms(path) -> float:
+    import soundfile as sf
+
+    data, _ = sf.read(str(path), always_2d=True)
+    return float((data**2).mean() ** 0.5) if data.size else 0.0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("song")
@@ -27,6 +34,11 @@ def main() -> None:
     if stems.is_dir() and any(stems.glob("*.wav")):
         jobs = [(stems / f"{p}.wav", ref / f"transcription_{p}.mid") for p in ("bass", "other", "vocals")]
         jobs = [(i, o) for i, o in jobs if i.exists()]
+        # ほぼ無音のパート(例: 歌なし曲の vocals)は他楽器の混ざり込みで偽の音が出るので書き起こさない
+        quiet = [i.stem for i, _ in jobs if _rms(i) < 0.15 * _rms(stems / "other.wav")]
+        for q in quiet:
+            print(f"スキップ: {q}(ほぼ無音のため書き起こしません)")
+        jobs = [(i, o) for i, o in jobs if i.stem not in quiet]
     else:
         jobs = [(ref / "audio.wav", ref / "transcription.mid")]
     for audio, _ in jobs:

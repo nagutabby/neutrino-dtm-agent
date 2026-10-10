@@ -34,22 +34,46 @@ def _templates():
     return out
 
 
-def estimate_key(chroma_mean) -> tuple[int, str, float]:
+def key_scores(chroma_mean) -> dict[tuple[int, str], float]:
     import numpy as np
 
-    best = (0, "長調", -2.0)
+    out = {}
     for tonic in range(12):
         for prof, mode in ((MAJOR, "長調"), (MINOR, "短調")):
             rot = np.array([prof[(i - tonic) % 12] for i in range(12)])
-            c = float(np.corrcoef(chroma_mean, rot)[0, 1])
-            if c > best[2]:
-                best = (tonic, mode, c)
-    return best
+            out[(tonic, mode)] = float(np.corrcoef(chroma_mean, rot)[0, 1])
+    return out
+
+
+def estimate_key(chroma_mean) -> tuple[int, str, float]:
+    sc = key_scores(chroma_mean)
+    (tonic, mode), conf = max(sc.items(), key=lambda kv: kv[1])
+    return tonic, mode, conf
+
+
+# キーの音階に収まるコード(根音からの半音数 -> 許す質)。"5"(3 度不明)はどちらでも可
+DIATONIC = {
+    "長調": {0: "", 2: "m", 4: "m", 5: "", 7: "", 9: "m"},
+    "短調": {0: "m", 3: "", 5: "m", 7: "m", 8: "", 10: ""},
+}
+
+
+def diatonic_fit(chords: list[tuple[int, str]], tonic: int, mode: str) -> float:
+    if not chords:
+        return 0.0
+    ok = 0
+    for root, q in chords:
+        want = DIATONIC[mode].get((root - tonic) % 12)
+        if want is not None and (
+            q == "5" or q == want or (mode == "短調" and (root - tonic) % 12 == 7)
+        ):
+            ok += 1
+    return ok / len(chords)
 
 
 def roman(root: int, q: str, ref_tonic: int) -> str:
     r = ROMAN[(root - ref_tonic) % 12]
-    return r.lower() if q == "m" else r
+    return r.lower() if q == "m" else r + ("5" if q == "5" else "")
 
 
 def tempo_word(bpm: float) -> str:
@@ -84,7 +108,8 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
     bpm = float(np.atleast_1d(tempo)[0])
     y_key = parts["other"][:n] if separated else y
     chroma = librosa.feature.chroma_cqt(y=y_key, sr=sr)
-    tonic, mode, conf = estimate_key(chroma.mean(axis=1))
+    chroma_key_mean = chroma.mean(axis=1)
+    tonic, mode, conf = estimate_key(chroma_key_mean)
     # コード推定は旋律に引っ張られにくい低〜中域(C2〜B4)のクロマを使う
     chroma_low = librosa.feature.chroma_cqt(
         y=y_harm, sr=sr, fmin=librosa.note_to_hz("C2"), n_octaves=3
@@ -123,11 +148,37 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
             if separated and c_bass[:, i : i + 4].mean() > 1e-3:
                 root = int(np.argmax(c_bass[:, i : i + 4].mean(axis=1)))
                 o = c_oth[:, i : i + 4].mean(axis=1)
-                q = "m" if o[(root + 3) % 12] > o[(root + 4) % 12] else ""
+                m3, M3 = o[(root + 3) % 12], o[(root + 4) % 12]
+                # 3 度の差が小さいときは長/短を断定せず "5"(3 度不明)にする
+                q = "5" if abs(m3 - M3) < 0.05 * max(m3 + M3, 1e-9) else ("m" if m3 > M3 else "")
             else:
                 v = v / np.linalg.norm(v)
                 (root, q), _ = max(tpl.items(), key=lambda kv: float(v @ kv[1]))
             bar_chords.append(f"{NAMES[root]}{q}|{roman(root, q, ref_tonic)}")
+    # コード列がキーの音階に収まる割合も加味して、キー(長調/短調)を決め直す
+    parsed = [
+        (
+            NAMES.index(c.split("|")[0].rstrip("m5")),
+            "m"
+            if c.split("|")[0].endswith("m")
+            else ("5" if c.split("|")[0].endswith("5") else ""),
+        )
+        for c in bar_chords
+    ]
+    if parsed:
+        sc = key_scores(chroma_key_mean)
+        (tonic, mode), _ = max(
+            sc.items(), key=lambda kv: diatonic_fit(parsed, *kv[0]) + 0.5 * kv[1]
+        )
+        conf = sc[(tonic, mode)]
+        ref_tonic = tonic if mode == "長調" else (tonic + 3) % 12
+        bar_chords = [
+            f"{c.split('|')[0]}|{roman(*p, ref_tonic)}"
+            for c, p in zip(bar_chords, parsed, strict=True)
+        ]
+        res_fit = round(diatonic_fit(parsed, tonic, mode), 2)
+    else:
+        res_fit = None
     names = [c.split("|")[0] for c in bar_chords]
     romans = [c.split("|")[1] for c in bar_chords]
     top = Counter(romans).most_common(4)
@@ -148,8 +199,14 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
         "tempo_bpm": round(bpm, 1),
         "key": f"{NAMES[tonic]} {mode}",
         "key_confidence": round(conf, 2),
+        "chords_in_key_ratio": res_fit,
         "chords_per_bar_head": names[:16],
         "roman_per_bar_head": romans[:16],
+        "ambiguous_chords": round(
+            sum(c.split("|")[0].endswith("5") for c in bar_chords) / len(bar_chords), 2
+        )
+        if bar_chords
+        else 0,
         "common_roman": [[r, n] for r, n in top],
         "loop_4bars": [list(loop[0]), loop[1]] if loop else None,
         "energy_by_eighth": energy,
