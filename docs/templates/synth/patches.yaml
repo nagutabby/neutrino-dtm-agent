@@ -1,16 +1,20 @@
-# この曲(プロジェクト)専用の音色の登録簿。実体は synthdefs.scd(同じ synth/ 内)。
-# 他の曲の音色は流用しない。ユーザーが指定した音だけを登録する。
-# params のキー = SynthDef の引数名、値 = 既定。amp=音量(0〜1)、pan=定位(-1〜1)。
-# kind: melodic = ノートごとに音程を変えて鳴らす / drums = ノート番号で打楽器を切り替える。
-# 任意: mono(音が続くと音程だけ滑らせる)/ oneshot(ノート長に関わらず鳴り切る)/ uses_dur(dur 引数を渡す)
-# サンプル(ユーザーが用意した wav のみ): sample: samples/<file>.wav と、任意で root_note: <MIDI ノート番号>
-#   (root_note があればノートの高さに合わせて rate を変える。無ければ rate=1)。SynthDef に buf と rate が必要。
+# この曲(プロジェクト)専用の音色の登録簿。ユーザーが指定した音だけを登録する。他の曲の音色は流用しない。
+# 音は Sonic Pi の内蔵シンセ(synth)+ 引数(params)+ 任意の FX(fx)で作る。一覧: `uv run scripts/sonicpi.py synths [名前]` / `fx [名前]`
+# params のキー = そのシンセの引数名(Sonic Pi の opts)、値 = 既定(数値)。amp=音量(0〜1)、pan=定位(-1〜1)。
+#   attack / decay / sustain / release は ADSR(秒)。cutoff は MIDI ノート番号(Hz ではない。60〜130)。
+# kind: melodic = ノートごとに音程を変えて鳴らす / drums = ノート番号で打楽器(ピース)を切り替える。
+# 任意: mono(音が続くと音程だけ滑らせる。滑る秒は params.note_slide)/ oneshot(ノート長に関わらず固定長の ADSR で鳴り切る)
+# fx: [{name: reverb, params: {room: 0.7, mix: 0.3}}, ...] 外側から順にパッチ全体へかける(drums はキット全体)
+# drums のピース: {notes: [36], synth: sc808_bassdrum, params: {...}, sweep: {note: 30, time: 0.12}}
+#   sweep = 鳴らした直後にそのノート番号まで time 秒で音程を滑らせる(キックのピッチ下降など)
+# サンプル(ユーザーが用意した wav のみ): synth の代わりに sample: samples/<file>.wav と、任意で root_note: <MIDI ノート番号>
+#   (root_note があればノートの高さに合わせて rate を変える。無ければ params.rate のまま)。Sonic Pi 同梱のサンプルは使わない。
 #   drums は各ピースに sample を書ける。
 # 例:
 #   my_bass:
 #     name: 名前
 #     kind: melodic
-#     synthdef: my_bass
+#     synth: tb303
 #     desc: ユーザーの指示(原文の要約)
-#     params: {amp: 0.5, pan: 0, cutoff: 900}
+#     params: {amp: 0.5, pan: 0, cutoff: 80, release: 0.2}
 patches: {}

@@ -12,7 +12,7 @@ AI が曲を作り切るのではなく、**スペック駆動**で「決める(
 ## セットアップ
 ```sh
 brew install uv ffmpeg fluid-synth      # MuseScore 4 は別途(brew install --cask musescore)
-cp .env.example .env                    # NEUTRINO_DIR / MUSESCORE_BIN を設定(シンセ合成に SuperCollider が必要: brew install --cask supercollider)
+cp .env.example .env                    # NEUTRINO_DIR / MUSESCORE_BIN を設定(シンセ合成に Sonic Pi が必要: brew install --cask sonic-pi)
 uv sync
 scripts/setup.sh                        # 不足の確認
 ```

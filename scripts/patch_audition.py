@@ -66,7 +66,7 @@ def main() -> None:
         notes = [{"start": s, "end": s + d, "note": n, "vel": 100, "ch": 0} for s, d, n in phrase(trk, reg[pid])]
         voices = sr.build_voices(notes, reg[pid], overrides, proj)
         print(f"■ {label_of(specs, key)}({trk}): パッチ {pid}")
-        sr.synthesize(voices, sr.end_time(voices), target, patches.synthdefs_path(a.song), a.dry_run)
+        sr.synthesize(voices, sr.end_time(voices), target, reg[pid].get("fx"), a.dry_run)
         made.append(target)
     print("\n試聴コマンド:")
     for t in sorted(out_dir.glob("*.wav")) if out_dir.is_dir() else made:

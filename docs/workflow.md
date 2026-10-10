@@ -1,7 +1,7 @@
 # 曲ごとのワークフロー
 
 ```
-5問(参考曲・ジャンル・長さ・歌/インスト・進め方) → ジャンル調査 → トラック計画・音色パッチ検査・サウンドチェック(全トラックの試奏を SuperCollider で作って確認)
+5問(参考曲・ジャンル・長さ・歌/インスト・進め方) → ジャンル調査 → トラック計画・音色パッチ検査・サウンドチェック(全トラックの試奏を Sonic Pi で作って確認)
   → spec 立案 → 決定(ready) → 生成 → 検証 → 提示(単体+累積) → 技術解説 → [step: 進行確認]
         ↑                                                              │
         └── 気になる点 → spec の差分案 → 了承 → version+1 → 該当+下流を再生成 ←┘
@@ -17,7 +17,7 @@
 8. ボーカル: 歌詞付き MusicXML(`midi_to_musicxml.sh` → `lyrics_inject.py` → `musicxml_validate.py`)→ `synth.sh`
 9. 修正は必ず spec から(`spec-revise` → `spec-regenerate`)。`spec_check.py` で stale を確認
 
-試聴: `scripts/play.sh <path> [--start 秒] [--loop]`(音声は mpv。MIDI は SuperCollider で一時合成して再生)、`scripts/play.sh --list <song>` で一覧。
+試聴: `scripts/play.sh <path> [--start 秒] [--loop]`(音声は mpv。MIDI は Sonic Pi で一時合成して再生)、`scripts/play.sh --list <song>` で一覧。
 
 ディレクトリ: `spec/ tracks/ stems/ mix/ musicxml/ label/{full,mono,timing}/ output/ genre/(任意) notes.md`
 トラックの番号は spec の番号(03 drums / 04 bass / 05 chords / 06 melody / 08 vocal / 10〜 ジャンル固有)。

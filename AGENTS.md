@@ -32,17 +32,17 @@
 - **セクション**: ユーザーの書いた名前と小節数を `user_inputs.yaml` の `sections` に写し、`genre_apply.py` が `01-structure` に反映する。無ければ空のまま(AI は補わない。ジャンル定義の標準構成は参考表示のみ)。
 - **トラックと音と使い方**: 作るトラックと、その音の説明(`sound`)、どう生成し曲のどこでどう使うか(`usage`: パターン・鳴らすセクション・役割)をユーザーの言葉のまま `user_inputs.yaml` の `tracks` に写す。`usage` が空なら本人に聞く(AI が補わない)。**指示されたトラックだけ**を作り、AI が足さない・省かない・「他にも要りませんか」と提案しない(本数の下限もない)。音色が決まらないトラックは作らない。
 - **音声サンプリング**: ユーザーが用意した wav だけを `projects/<song>/samples/` に置いて使える(PCM の WAV。AI が探す・取ってくる・提案することはしない。参考曲の音声やボーカル出力を流用しない)。有無ではなく**技法**(どのトラックで・どの wav を・どんな技法/加工で・どこで鳴らすか)を自由記述で聞き、原文を `tracks` の `sampling` に写す(AI は技法の候補・例を出さない)。音の作りは `patches.yaml` の `sample` / `root_note` などに落とす。権利はユーザーの責任(`docs/licensing.md`)。
-- 指示を受けたら、解釈を足さず原文を `sound` に残し、音の作り(合成する SynthDef の方針)を一言でユーザーに伝える。変えるのは、ユーザーが言い直したときだけ。
+- 指示を受けたら、解釈を足さず原文を `sound` に残し、音の作り(使う Sonic Pi 内蔵シンセ・FX の方針)を一言でユーザーに伝える。変えるのは、ユーザーが言い直したときだけ。
 
 ## 音は曲ごとの専用(既存の音源を再利用しない)
 
-- **伴奏の音は SuperCollider で作る**(厳守)。SoundFont・外部の音源・参考曲の音声・他ツールの合成音は使わない。サンプルは**ユーザーが用意した wav だけ**(上節)。歌声のみ NEUTRINO。
-- **音色は曲(プロジェクト)ごとに新しく作る**。`projects/<song>/synth/synthdefs.scd`(SuperCollider)と `projects/<song>/synth/patches.yaml`(登録簿)に、ユーザーが指示した音だけを書く。**他の曲の音色・リポジトリ共通の音色(`config/patches.yaml`・`synth/synthdefs.scd`)をコピー・参照して使わない**(それらは過去の遺産で、レンダリングは読み込まない)。新しい曲の `synth/` は空から始まる(`new_song.sh` が雛形を置く)。
+- **伴奏の音は Sonic Pi の内蔵シンセで作る**(厳守)。SoundFont・外部の音源・参考曲の音声・他ツールの合成音・Sonic Pi 同梱のサンプルは使わない。サンプルは**ユーザーが用意した wav だけ**(上節)。歌声のみ NEUTRINO。
+- **音色は曲(プロジェクト)ごとに新しく作る**。`projects/<song>/synth/patches.yaml`(登録簿: Sonic Pi 内蔵シンセ名 `synth`・引数 `params`・任意の `fx`)に、ユーザーが指示した音だけを書く。**他の曲の音色をコピー・参照して使わない**。新しい曲の `synth/` は空から始まる(`new_song.sh` が雛形を置く)。内蔵シンセ・FX の一覧と引数は `uv run scripts/sonicpi.py synths|fx [名前]`。
 - トラックは `params.patch`(その曲の `patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決める。一覧は `uv run scripts/patches.py list <song>`、引数は `patches.py show <song> <id>`、曲の検査は `patches.py check <song>`(不正・他曲の音色参照は終了コード 2。直してから進む)。仕組みは `docs/synthesis.md`。
 
 ## サウンドチェック(音楽制作の前に全トラックの音を作る)
 
-**音楽制作(構成・和声・MIDI 生成など)は、ユーザーが指示した全トラックの音(この曲専用のパッチ)を SuperCollider で合成し、ユーザーが確認してから始める。**
+**音楽制作(構成・和声・MIDI 生成など)は、ユーザーが指示した全トラックの音(この曲専用のパッチ)を Sonic Pi で合成し、ユーザーが確認してから始める。**
 1. `genre_apply.py` と `patches.py check` が通ったら、`uv run scripts/patch_audition.py <song>` で全トラックの試奏 wav を `projects/<song>/audition/NN_<track>.wav` に作る(固定の短いフレーズ。曲の中身ではない)。ボーカルは対象外。
 2. 各トラックの音色(パッチ・主な引数が音にどう効くか)を数値付きで短く解説し、`! scripts/play.sh <path>` の再生コマンドを全トラック分並べる。
 3. `step`: `AskUserQuestion`(このまま進む / 音色を変える)で確認。変えるなら spec の `patch` / `patch_params` を更新し、`patch_audition.py --force` で作り直す。`auto`: 全トラック分を作って一覧を提示するが、止まらずそのまま制作へ進む(気になる点は最後にまとめて聞く)。
@@ -50,11 +50,11 @@
 
 ## ボーカルとの調和・インストでの成立(歌ありの曲。詳細: `docs/vocal-blend.md`)
 
-歌声(NEUTRINO)と伴奏(SuperCollider)は別々に作るため、そのまま重ねると歌だけ浮く。次を守る。
+歌声(NEUTRINO)と伴奏(Sonic Pi)は別々に作るため、そのまま重ねると歌だけ浮く。次を守る。
 1. **ボーカルがなくても曲として成立する配置にする**: 主旋律をボーカルだけに持たせない。ユーザーが指示したトラックのうち旋律を担えるものが、歌の旋律を追う/受ける/合いの手を入れる。歌のない区間はそのトラックが主役になる。全区間で「リズム・低域・旋律か和声」のうち2要素以上を鳴らす。トラックは足さない(足りなければ事実だけ報告してユーザーに判断を仰ぐ)。
 2. **インスト版を必ず確認する**: `mix_tracks.sh <song> <step> exclude=vocal` で `mix/step<N>_inst_vN.wav` を作り、通常ミックスと並べて提示し、`mix-review` の対象にする。
 3. **ボーカルをなじませる**: テンポ・調の一致、帯域の住み分け、歌う間のダッキング、伴奏と同種のリバーブ、質感(歪み・帯域)のそろえを `09-mix` と各 spec の数値で作る。
-4. **シンセ/ボコーダー変換を使える**: 歌声を SuperCollider のボコーダー(モジュレーター=ボーカル wav、キャリア=その曲専用シンセ)やピッチ/フォルマント加工で楽器の質感に溶かせる。ユーザーが指示したとき、またはミックスレビューの「ボーカルが浮く」指摘への対応(spec 差分案)として使う。曲の最初に候補として出さない。加工は DSP のみ。AI/ML の音声変換やサンプルライブラリ化は禁止(`docs/licensing.md`)。
+4. **シンセ/ボコーダー変換を使える**: 歌声を Sonic Pi の FX(`ring_mod` / `vowel` / `pitch_shift` など)や ffmpeg のピッチ加工で楽器の質感に溶かせる(Sonic Pi にボコーダーはない)。ユーザーが指示したとき、またはミックスレビューの「ボーカルが浮く」指摘への対応(spec 差分案)として使う。曲の最初に候補として出さない。加工は DSP のみ。AI/ML の音声変換やサンプルライブラリ化は禁止(`docs/licensing.md`)。
 
 ## 進め方(`run_mode`)
 
@@ -106,14 +106,14 @@
 
 ## パイプライン
 
-`MIDI → MusicXML → label → wav`(NEUTRINO は MusicXML のみ入力、歌声のみ合成)。伴奏トラックは MIDI を SuperCollider(NRT)でゼロから合成して wav 化し、ffmpeg で重ねる。全中間ファイルを `projects/<song>/` に保持する。
+`MIDI → MusicXML → label → wav`(NEUTRINO は MusicXML のみ入力、歌声のみ合成)。伴奏トラックは MIDI を Sonic Pi の内蔵シンセでゼロから合成し(ヘッドレスで実時間録音。曲の長さ分の時間がかかり、録音中は音が鳴る)wav 化し、ffmpeg で重ねる。全中間ファイルを `projects/<song>/` に保持する。
 
 - NEUTRINO 本体は `NEUTRINO_DIR`(既定 `~/NEUTRINO`)。**読み取り専用で、書き込まない**。出力は常に `projects/<song>/output/`。
 - 詳細: `docs/neutrino-cli.md`、`docs/midi-musicxml-rules.md`、`docs/workflow.md`。
 
 ## 試聴(CLI)
 
-- 音を聴くのは `scripts/play.sh`(音声は `mpv`。MIDI は SuperCollider で一時合成してから再生)。操作: スペース=一時停止、←→=5秒移動、q=終了。
+- 音を聴くのは `scripts/play.sh`(音声は `mpv`。MIDI は Sonic Pi で一時合成してから再生)。操作: スペース=一時停止、←→=5秒移動、q=終了。
 - `scripts/play.sh <path> [--start 秒] [--loop]`(`projects/` 配下のみ。`--dry-run` で確認)、`scripts/play.sh --list <song>` で聴けるファイルを一覧。
 - エージェントは **再生コマンドを提示する**(ユーザーが `!` を付けて実行する)。ユーザーが「再生して」と頼んだときだけ、`run_in_background` で実行し、長時間フォアグラウンドで止めない。聴いた感想を必ず聞く(`coach-review`)。
 - 聴きどころは「何秒付近の何」を `--start` 付きコマンドで示す。A/B 比較は2本のコマンドを並べて提示する。
@@ -121,7 +121,7 @@
 
 ## 制約(厳守)
 
-- 伴奏・効果音を含め、曲に使う音は、その曲専用の SuperCollider の SynthDef(`projects/<song>/synth/`)で合成する。例外はユーザーが用意して `samples/` に置いた wav だけ。別の方法で音を作る・サンプルを探す/提案する・他の曲やリポジトリ共通の音色を再利用することをしない。コード進行・セクション・トラックの音と使い方・サンプリングは AI がサジェストしない。
+- 伴奏・効果音を含め、曲に使う音は、その曲専用の Sonic Pi 内蔵シンセのパッチ(`projects/<song>/synth/patches.yaml`)で合成する。例外はユーザーが用意して `samples/` に置いた wav だけ。別の方法で音を作る・サンプル(Sonic Pi 同梱を含む)を探す/提案する・他の曲の音色を再利用することをしない。コード進行・セクション・トラックの音と使い方・サンプリングは AI がサジェストしない。
 - 歌声パートは**単旋律・和音なし**、1音符1音節、歌詞必須、休符で息継ぎ、極端な音域を避ける。
 - `step` では、ユーザーの答えなしに次トラックへ進まない。どちらのモードでも技術解説なしで提示しない。1ステップに足すトラックは1本まで。
 - ジャンル・曲の長さ・進め方と、コード進行・セクション・トラックの音と使い方(ユーザー指示)を受けずに spec を作り始めない。`patches.py check` が通らないまま生成・レンダリングしない。
@@ -147,4 +147,4 @@
 ## 開発メモ
 
 - Python は `uv`。`uv sync` → `uv run pytest` → `uv run ruff check .`。シェルは `shellcheck scripts/*.sh`。
-- 外部ツール: `mpv`(音声の試聴)、`SuperCollider`(sclang。MIDI からの音の合成・試聴)、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。
+- 外部ツール: `mpv`(音声の試聴)、`Sonic Pi`(ヘッドレス実行。MIDI からの音の合成・試聴。`brew install --cask sonic-pi`)と `ruby`、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。

@@ -4,25 +4,29 @@ import mido
 import patches
 import pytest
 import synth_render as sr
-from conftest import PATCHES, SYNTHDEFS, write_patches
+from conftest import PATCHES, write_patches
 from test_spec import set_meta
 
 
-def test_registry_matches_synthdefs(song_with_patches):
-    """登録簿の params / pieces の引数名は、すべて曲の SynthDef の引数として存在する。"""
-    args = patches.synthdef_args("demo")
-    for pid, e in patches.registry("demo").items():
-        if e["kind"] == "drums":
-            for name, p in e["pieces"].items():
-                assert set(p["params"]) <= args[p["synthdef"]], (pid, name)
-        else:
-            assert set(e["params"]) <= args[e["synthdef"]], pid
+def test_registry_matches_sonic_pi_synths(song_with_patches):
+    """登録簿の synth / params / fx は、すべて Sonic Pi の内蔵シンセ・FX の名前と引数として存在する。"""
+    reg = patches.registry("demo")
+    assert patches.voice_errors("lowsaw", reg["lowsaw"]) == []
+    assert patches.voice_errors("kit.kick", reg["kit"]["pieces"]["kick"]) == []
+    assert patches.fx_errors("keys", reg["keys"]) == []
+
+
+def test_unknown_synth_param_and_fx_are_errors(song_with_patches):
+    assert patches.voice_errors("x", {"synth": "nosuch", "params": {}})
+    assert any("cutoffy" in e for e in patches.voice_errors("x", {"synth": "tb303", "params": {"cutoffy": 1}}))
+    assert patches.fx_errors("x", {"fx": [{"name": "nosuch"}]})
+    assert patches.fx_errors("x", {"fx": [{"name": "reverb", "params": {"nosuch": 1}}]})
+    assert patches.voice_errors("x", {"synth": "tb303", "params": {}, "sweep": {"note": 30}})
 
 
 def test_new_project_starts_without_any_patch(song):
     """曲は空の音色から始まる。リポジトリ共通の音色(config/patches.yaml)は引き継がない。"""
     assert patches.registry("demo") == {}
-    assert patches.synthdef_args("demo") == {}
 
 
 def test_other_songs_patches_are_not_visible(song_with_patches, tmp_path):
@@ -47,11 +51,11 @@ def test_no_default_patch_is_assumed(song_with_patches):
 
 def test_override_validation(song_with_patches):
     reg = patches.registry("demo")
-    assert patches.validate_overrides(reg["lowsaw"], {"cutoff": 700}) == []
+    assert patches.validate_overrides(reg["lowsaw"], {"cutoff": 70}) == []
     assert patches.validate_overrides(reg["lowsaw"], {"nope": 1})
-    assert patches.validate_overrides(reg["kit"], {"kick": {"tune": 40}}) == []
+    assert patches.validate_overrides(reg["kit"], {"kick": {"decay": 0.4}}) == []
     assert patches.validate_overrides(reg["kit"], {"kick": {"cutoff": 40}})
-    assert patches.validate_overrides(reg["kit"], {"banjo": {"tune": 40}})
+    assert patches.validate_overrides(reg["kit"], {"banjo": {"decay": 0.4}})
 
 
 def _mid(tmp_path, events, ticks=480):
@@ -82,13 +86,14 @@ def test_mono_patch_glides_adjacent_notes(song_with_patches):
         {"start": 2.0, "end": 2.5, "note": 36, "vel": 100, "ch": 0},
     ]
     v = sr.build_voices(notes, reg, {})
-    assert len(v) == 2 and v[0]["sets"] == [(0.5, pytest.approx(sr.mtof(39), abs=1e-3))] and v[0]["release"] == 1.0
+    assert len(v) == 2 and v[0]["sets"] == [(0.5, 39)] and v[0]["end"] == 1.0
+    assert v[0]["opts"]["note"] == 36 and v[0]["opts"]["note_slide"] == sr.DEFAULT_GLIDE
 
 
 def test_poly_patch_makes_one_voice_per_note(song_with_patches):
     notes = [{"start": 0.0, "end": 1.0, "note": n, "vel": 90, "ch": 0} for n in (60, 64, 67)]
-    v = sr.build_voices(notes, patches.registry("demo")["keys"], {"index": 2.0})
-    assert len(v) == 3 and all(x["controls"]["index"] == 2.0 for x in v)
+    v = sr.build_voices(notes, patches.registry("demo")["keys"], {"depth": 2.0})
+    assert len(v) == 3 and all(x["opts"]["depth"] == 2.0 and x["synth"] == "fm" for x in v)
 
 
 def test_drum_notes_map_to_pieces_and_velocity_scales_amp(song_with_patches):
@@ -98,21 +103,38 @@ def test_drum_notes_map_to_pieces_and_velocity_scales_amp(song_with_patches):
         {"start": 0.5, "end": 0.6, "note": 56, "vel": 64, "ch": 9},
         {"start": 1.0, "end": 1.1, "note": 99, "vel": 100, "ch": 9},  # 割り当てなし
     ]
-    v = sr.build_voices(notes, reg, {"kick": {"tune": 38}})
-    assert [x["def"] for x in v] == ["thump", "tick"]
-    assert v[0]["controls"]["tune"] == 38 and v[0]["release"] is None
-    assert v[1]["controls"]["amp"] < reg["pieces"]["tick"]["params"]["amp"]
+    v = sr.build_voices(notes, reg, {"kick": {"decay": 0.4}})
+    assert [x["synth"] for x in v] == ["sc808_bassdrum", "sc808_closed_hihat"]
+    assert v[0]["opts"]["decay"] == 0.4 and v[0]["end"] is None
+    assert v[1]["opts"]["amp"] < reg["pieces"]["tick"]["params"]["amp"]
 
 
-def test_scd_loads_the_songs_own_synthdefs(song_with_patches, tmp_path):
-    notes = [{"start": 0.0, "end": 0.5, "note": 48, "vel": 100, "ch": 0}]
-    v = sr.build_voices(notes, patches.registry("demo")["lowsaw"], {})
-    scd = tmp_path / "r.scd"
-    sr.write_scd(scd, v, sr.end_time(v), tmp_path / "s.osc", tmp_path / "o.wav", patches.synthdefs_path("demo"))
-    src = scd.read_text(encoding="utf-8")
-    assert "\\lowsaw" in src and "Score.recordNRT" in src and "0.exit" in src
-    assert str(song_with_patches / "synth" / "synthdefs.scd") in src and "synth/synthdefs.scd\"" in src
-    assert [e[1] for e in sr.score_events(v)] == [0, 2]
+def test_code_uses_builtin_synths_and_fx(song_with_patches):
+    reg = patches.registry("demo")
+    notes = [{"start": 0.0, "end": 0.5, "note": 48, "vel": 100, "ch": 0}, {"start": 0.5, "end": 1.0, "note": 52, "vel": 100, "ch": 0}]
+    v = sr.build_voices(notes, reg["keys"], {})
+    code = sr.build_code(v, sr.end_time(v), reg["keys"]["fx"])
+    assert "with_fx :reverb, room: 0.6, mix: 0.3 do" in code and "synth :fm, " in code and "note: 48" in code
+    assert code.count("sleep ") == 2 and code.rstrip().endswith("end")
+    # sustain はノート長から決まる(0.5 秒 - attack 0 - decay 0)
+    assert "sustain: 0.5" in code
+
+
+def test_mono_and_sweep_emit_control(song_with_patches):
+    reg = patches.registry("demo")
+    notes = [{"start": 0.0, "end": 0.5, "note": 36, "vel": 100, "ch": 0}, {"start": 0.5, "end": 1.0, "note": 39, "vel": 100, "ch": 0}]
+    code = sr.build_code(sr.build_voices(notes, reg["lowsaw"], {}), 3.0)
+    assert "v0 = synth :tb303" in code and "control v0, note: 39.0" in code and "sustain: 1.0" in code
+    kick = sr.build_voices([{"start": 0.0, "end": 0.1, "note": 36, "vel": 127, "ch": 9}], reg["kit"], {})
+    kc = sr.build_code(kick, 2.0)
+    assert "v0 = synth :sc808_bassdrum" in kc and "note_slide: 0.1" in kc and "control v0, note: 30.0" in kc
+
+
+def test_timeline_has_no_drift(song_with_patches):
+    notes = [{"start": i / 3, "end": i / 3 + 0.1, "note": 60, "vel": 100, "ch": 0} for i in range(30)]
+    code = sr.build_code(sr.build_voices(notes, patches.registry("demo")["keys"], {}), 12.0)
+    total = sum(float(ln.split()[1]) for ln in code.splitlines() if ln.strip().startswith("sleep "))
+    assert total == pytest.approx(12.0, abs=1e-3)
 
 
 def _wav(path, seconds=0.5, rate=8000):
@@ -124,23 +146,20 @@ def _wav(path, seconds=0.5, rate=8000):
 
 
 SAMPLE_PATCHES = PATCHES + """  hit:
-    {name: 声, kind: melodic, synthdef: player, oneshot: true, sample: samples/hit.wav, root_note: 60, params: {amp: 0.5, pan: 0}}
+    {name: 声, kind: melodic, sample: samples/hit.wav, root_note: 60, params: {amp: 0.5, pan: 0}}
 """
 
 
-def test_user_sample_is_pitched_and_loaded_as_buffer(song_with_patches, tmp_path):
+def test_user_sample_is_pitched_and_played_with_sample(song_with_patches):
     _wav(song_with_patches / "samples" / "hit.wav")
     write_patches(song_with_patches, SAMPLE_PATCHES)
     set_meta(song_with_patches, "06-melody", params={"patch": "hit"})
     assert patches.check("demo", only="06-melody") == []
     notes = [{"start": 0.0, "end": 0.1, "note": 72, "vel": 100, "ch": 0}]
     v = sr.build_voices(notes, patches.registry("demo")["hit"], {}, song_with_patches)
-    assert v[0]["controls"]["rate"] == pytest.approx(2.0) and v[0]["tail"] == pytest.approx(0.25)
-    scd = tmp_path / "r.scd"
-    sr.write_scd(scd, v, sr.end_time(v), tmp_path / "s.osc", tmp_path / "o.wav", patches.synthdefs_path("demo"))
-    src = scd.read_text(encoding="utf-8")
-    assert "/b_allocRead" in src and "hit.wav" in src and sr.end_time(v) >= 0.25
-    assert v[0]["controls"]["buf"] == 0
+    assert v[0]["opts"]["rate"] == pytest.approx(2.0) and v[0]["tail"] == pytest.approx(0.25) and v[0]["end"] is None
+    code = sr.build_code(v, sr.end_time(v))
+    assert "sample \"" in code and "hit.wav" in code and "rate: 2.0" in code and sr.end_time(v) >= 0.25
 
 
 def test_sample_outside_samples_dir_is_rejected(song_with_patches):
@@ -150,20 +169,20 @@ def test_sample_outside_samples_dir_is_rejected(song_with_patches):
     assert any("samples/" in e for e in patches.check("demo"))
 
 
-def test_sample_missing_or_synthdef_without_buf_is_an_error(song_with_patches):
-    write_patches(song_with_patches, SAMPLE_PATCHES, SYNTHDEFS.replace("buf=0, rate=1, ", ""))
-    _wav(song_with_patches / "samples" / "hit.wav")
+def test_sample_missing_or_with_synth_is_an_error(song_with_patches):
+    write_patches(song_with_patches, SAMPLE_PATCHES)
     set_meta(song_with_patches, "06-melody", params={"patch": "hit"})
-    assert any("buf" in e for e in patches.check("demo"))
-    (song_with_patches / "samples" / "hit.wav").unlink()
-    assert any("samples/" in e for e in patches.check("demo"))
+    assert any("samples/" in e for e in patches.check("demo"))  # wav がまだない
+    _wav(song_with_patches / "samples" / "hit.wav")
+    write_patches(song_with_patches, SAMPLE_PATCHES.replace("kind: melodic, sample", "kind: melodic, synth: beep, sample"))
+    assert any("同時に" in e for e in patches.check("demo"))
 
 
 def test_render_dry_run(song_with_patches, capsys):
     import common
 
     d = common.require_project("demo")
-    set_meta(d, "04-bass", params={"patch": "lowsaw", "patch_params": {"cutoff": 700}})
+    set_meta(d, "04-bass", params={"patch": "lowsaw", "patch_params": {"cutoff": 70}})
     (d / "tracks").mkdir(exist_ok=True)
     _mid(d / "tracks", [(0, "note_on", 36, 100), (480, "note_off", 36, 0)]).rename(d / "tracks" / "04_bass_v1.mid")
     sr.render("demo", "04_bass_v1", dry_run=True)

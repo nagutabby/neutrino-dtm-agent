@@ -23,7 +23,7 @@ frontmatter: `status`(draft/ready/needs-revision)、`version`、`depends_on`、`
 `step`=1トラックごとに提示して確認 / `auto`=最後まで作り切って最後にまとめて提示。最初にユーザーに聞き、`00-concept` に記録する。
 
 ## 音色(シンセ)
-音は SuperCollider でゼロから合成する(例外: ユーザーが用意した wav)。音色は**曲ごとの専用**で、他の曲・共通の既存音色は流用しない。トラックは `params.patch` でその曲のパッチ ID を指定し、`patch_params` で引数を上書き。登録簿は `projects/<song>/synth/patches.yaml`、実体は `projects/<song>/synth/synthdefs.scd`。ユーザーの最初の指示(コード進行・トラックと音・サンプリング)は `projects/<song>/user_inputs.yaml`。`patches.py check <song>` が ID・引数名・サンプルの置き場の誤りを検出する(終了コード 2)。仕組みと各引数の効き方は `docs/synthesis.md`。
+音は Sonic Pi の内蔵シンセ(+引数・FX)でゼロから合成する(例外: ユーザーが用意した wav。Sonic Pi 同梱のサンプルは使わない)。音色は**曲ごとの専用**で、他の曲の音色は流用しない。トラックは `params.patch` でその曲のパッチ ID を指定し、`patch_params` で引数を上書き。登録簿は `projects/<song>/synth/patches.yaml`(synth 名・params・fx)。ユーザーの最初の指示(コード進行・トラックと音・サンプリング)は `projects/<song>/user_inputs.yaml`。`patches.py check <song>` が ID・シンセ名・引数名・FX・サンプルの置き場の誤りを検出する(終了コード 2)。仕組みと各引数の効き方は `docs/synthesis.md`。
 
 ## ルール
 - 生成物(MIDI/MusicXML)を直接直さない。ユーザーが自分で編集した場合のみ、取り込み→spec 逆更新を提案する

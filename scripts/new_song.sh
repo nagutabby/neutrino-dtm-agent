@@ -23,7 +23,7 @@ done
 run cp "$ROOT"/docs/templates/spec/*.md "$DEST/spec/"
 run cp "$ROOT/docs/templates/notes.md" "$DEST/notes.md"
 # この曲専用の音色(他の曲・リポジトリ共通の音色は流用しない)と、ユーザーの最初の指示
-run cp "$ROOT/docs/templates/synth/synthdefs.scd" "$ROOT/docs/templates/synth/patches.yaml" "$DEST/synth/"
+run cp "$ROOT/docs/templates/synth/patches.yaml" "$DEST/synth/"
 run cp "$ROOT/docs/templates/user_inputs.yaml" "$DEST/user_inputs.yaml"
 echo "作成しました: projects/$SONG"
 echo "曲名(以降のスクリプトに渡す): $SONG"

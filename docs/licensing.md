@@ -27,5 +27,5 @@
 - 取得した音声・分離音は私的な分析用で、コミット・公開しない(`docs/reference-analysis.md`)。
 
 ## シンセ音源
-- 伴奏は、その曲専用の SynthDef(`projects/<song>/synth/synthdefs.scd`)で SuperCollider によりゼロから合成する。SoundFont・外部音源は使わない。
-- 例外は**ユーザーが自分で用意して `projects/<song>/samples/` に置いた wav**(自作の録音など)。AI はサンプルを探さない・提案しない。その音の権利(第三者の素材ならそのライセンス)の確認はユーザーの責任。`projects/` は git 管理外なので、サンプルをコミットしない。SuperCollider 自体は GPL(本リポジトリは同梱せず、ユーザーが導入する)。
+- 伴奏は、Sonic Pi の内蔵シンセ(`projects/<song>/synth/patches.yaml` の synth / params / fx)でゼロから合成する。SoundFont・外部音源・Sonic Pi 同梱のサンプルは使わない。
+- 例外は**ユーザーが自分で用意して `projects/<song>/samples/` に置いた wav**(自作の録音など)。AI はサンプルを探さない・提案しない。その音の権利(第三者の素材ならそのライセンス)の確認はユーザーの責任。`projects/` は git 管理外なので、サンプルをコミットしない。Sonic Pi 自体は MIT ライセンス(本リポジトリは同梱せず、ユーザーが導入する)。

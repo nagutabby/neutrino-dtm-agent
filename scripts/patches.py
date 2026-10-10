@@ -5,28 +5,41 @@
   patches.py list <song>       その曲の登録簿の一覧
   patches.py show <song> <id>  そのパッチの引数と既定値(spec の patch_params を決める根拠)
 
-音色は曲ごとに持ち、他の曲やリポジトリ共通の音色は流用しない。実体は projects/<song>/synth/synthdefs.scd(SuperCollider)。
-ユーザーが用意した wav(projects/<song>/samples/)だけは、patches.yaml の sample で鳴らせる。SoundFont・外部音源は使わない。
+音色は曲ごとに持ち、他の曲の音色は流用しない。パッチ = Sonic Pi 内蔵シンセ(synth)+ 引数(params)+ 任意の FX(fx)。
+ユーザーが用意した wav(projects/<song>/samples/)だけは、patches.yaml の sample で鳴らせる(Sonic Pi 同梱のサンプルは使わない)。
+内蔵シンセ・FX の名前と引数は config/sonicpi_synths.json(`sonicpi.py dump-info` で作り直す)と照合する。
 """
 
 from __future__ import annotations
 
 import argparse
-import re
+import json
 import sys
 import wave
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from common import active_keys, load_specs, require_project, track_of
+from common import ROOT, active_keys, load_specs, require_project, track_of
+
+INFO_PATH = ROOT / "config" / "sonicpi_synths.json"
+# sample :xxx に渡せる主な引数(ユーザーの wav を鳴らすパッチの params に書ける)
+SAMPLE_OPTS = {
+    "amp", "pan", "attack", "decay", "sustain", "release", "attack_level", "decay_level", "sustain_level", "env_curve",
+    "cutoff", "lpf", "hpf", "res", "rate", "start", "finish", "norm", "pitch", "window_size", "pitch_dis", "time_dis",
+}
 
 
 def registry_path(song: str) -> Path:
     return require_project(song) / "synth" / "patches.yaml"
 
 
-def synthdefs_path(song: str) -> Path:
-    return require_project(song) / "synth" / "synthdefs.scd"
+@lru_cache(maxsize=1)
+def info() -> dict:
+    """Sonic Pi 内蔵シンセ・FX の {synths: {名前: [引数]}, fx: {...}}。"""
+    if not INFO_PATH.is_file():
+        sys.exit("[エラー] config/sonicpi_synths.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)")
+    return json.loads(INFO_PATH.read_text(encoding="utf-8"))
 
 
 def registry(song: str) -> dict[str, dict]:
@@ -50,20 +63,53 @@ def patch_id_of(specs: dict[str, tuple[dict, str]], key: str) -> str | None:
     return None
 
 
+def is_sample(holder: dict) -> bool:
+    return holder.get("sample") is not None
+
+
 def allowed_params(entry: dict) -> set[str]:
     if entry.get("kind") == "drums":
         return set(entry.get("pieces") or {})
     return set(entry.get("params") or {})
 
 
-def synthdef_args(song: str) -> dict[str, set[str]]:
-    """曲の synthdefs.scd から SynthDef 名 -> 引数名の集合を読む(登録簿との整合検査用)。"""
-    p = synthdefs_path(song)
-    src = p.read_text(encoding="utf-8") if p.is_file() else ""
-    out: dict[str, set[str]] = {}
-    for m in re.finditer(r"SynthDef\(\\(\w+),\s*\{\s*\|([^|]*)\|", src):
-        out[m.group(1)] = {a.split("=")[0].strip() for a in m.group(2).split(",") if a.strip()}
-    return out
+def fx_errors(name: str, entry: dict) -> list[str]:
+    """パッチ(キット)全体にかける FX の検査。fx: [{name: reverb, params: {room: 0.6}}]"""
+    errs: list[str] = []
+    for i, fx in enumerate(entry.get("fx") or []):
+        fname = (fx or {}).get("name")
+        if fname not in info()["fx"]:
+            errs.append(f"{name}: fx[{i}] '{fname}' は Sonic Pi の内蔵 FX にない(`sonicpi.py fx` で一覧)")
+            continue
+        for k, v in (fx.get("params") or {}).items():
+            if k not in info()["fx"][fname]:
+                errs.append(f"{name}: fx '{fname}' に引数 '{k}' はない")
+            elif not isinstance(v, (int, float)) or isinstance(v, bool):
+                errs.append(f"{name}: fx '{fname}' の {k} は数値で書く")
+    return errs
+
+
+def voice_errors(name: str, h: dict) -> list[str]:
+    """1つの音(melodic のパッチ、または drums のピース)の synth / params / sweep の検査。"""
+    errs: list[str] = []
+    params = h.get("params")
+    if not isinstance(params, dict):
+        return [f"{name}: params はマッピングで書く"]
+    if is_sample(h):
+        if h.get("synth"):
+            errs.append(f"{name}: sample と synth は同時に指定できない")
+        valid, what = SAMPLE_OPTS, "sample の引数"
+    else:
+        synth = h.get("synth")
+        if synth not in info()["synths"]:
+            return [f"{name}: synth '{synth}' は Sonic Pi の内蔵シンセにない(`sonicpi.py synths` で一覧。他の音源は使わない)"]
+        valid, what = set(info()["synths"][synth]), f"{synth} の引数"
+    errs += [f"{name}: params '{k}' は {what} にない" for k in params if k not in valid]
+    errs += [f"{name}: params.{k} は数値で書く" for k, v in params.items() if not isinstance(v, (int, float)) or isinstance(v, bool)]
+    sw = h.get("sweep")
+    if sw is not None and (is_sample(h) or not isinstance(sw, dict) or not {"note", "time"} <= set(sw)):
+        errs.append(f"{name}: sweep は合成シンセ用の {{note: 到達ノート, time: 秒}}")
+    return errs
 
 
 def validate_overrides(entry: dict, overrides: dict) -> list[str]:
@@ -100,7 +146,7 @@ def sample_file(song: str, rel: str) -> Path | None:
     return p if p.is_relative_to(base) and p.suffix.lower() == ".wav" and p.is_file() else None
 
 
-def sample_errors(song: str, pid: str, entry: dict, args: dict[str, set[str]]) -> list[str]:
+def sample_errors(song: str, pid: str, entry: dict) -> list[str]:
     """サンプルを使うパッチ(patch 自身、または drums のピース)の検査。"""
     errs: list[str] = []
     holders = [(pid, entry)] if entry.get("kind") != "drums" else [(f"{pid}.{n}", p) for n, p in (entry.get("pieces") or {}).items()]
@@ -117,9 +163,6 @@ def sample_errors(song: str, pid: str, entry: dict, args: dict[str, set[str]]) -
                 pass
         except (wave.Error, EOFError):
             errs.append(f"{name}: {rel} は PCM の WAV ではありません(16/24bit PCM の wav に変換してもらう)")
-        miss = {"buf", "rate"} - args.get(h.get("synthdef", ""), set())
-        if miss:
-            errs.append(f"{name}: サンプルを鳴らす SynthDef '{h.get('synthdef')}' に引数 {sorted(miss)} が必要")
     return errs
 
 
@@ -128,7 +171,6 @@ def check(song: str, only: str | None = None) -> list[str]:
     reg = registry(song)
     specs = load_specs(song)
     errs: list[str] = []
-    args = synthdef_args(song)
     for key in active_keys(specs):
         t = track_of(specs, key)
         if not t or t == "vocal" or (only and key != only):
@@ -141,9 +183,15 @@ def check(song: str, only: str | None = None) -> list[str]:
             errs.append(f"{key}: この曲の登録簿 projects/{song}/synth/patches.yaml にないパッチ '{pid}'(他の曲の音色は流用しない。ユーザーの指示から synth/ に作る)")
             continue
         entry = reg[pid]
-        used = [entry["synthdef"]] if entry.get("kind") != "drums" else [p["synthdef"] for p in entry["pieces"].values()]
-        errs += [f"{key}: SynthDef '{d}' が projects/{song}/synth/synthdefs.scd にない" for d in used if d not in args]
-        errs += [f"{key}: {e}" for e in sample_errors(song, pid, entry, args)]
+        if entry.get("kind") == "drums":
+            for pn, piece in (entry.get("pieces") or {}).items():
+                errs += [f"{key}: {e}" for e in voice_errors(f"{pid}.{pn}", piece)]
+        elif entry.get("kind") == "melodic":
+            errs += [f"{key}: {e}" for e in voice_errors(pid, entry)]
+        else:
+            errs.append(f"{key}: パッチ '{pid}' の kind は melodic か drums")
+        errs += [f"{key}: {e}" for e in fx_errors(pid, entry)]
+        errs += [f"{key}: {e}" for e in sample_errors(song, pid, entry)]
         ov = (specs[key][0].get("params") or {}).get("patch_params")
         if ov:
             errs += [f"{key}: {e}" for e in validate_overrides(reg[pid], ov)]
@@ -178,10 +226,12 @@ def cmd_show(song: str, pid: str) -> int:
     print(f"■ {pid}: {e['name']} [{e['kind']}] — {e.get('desc', '')}")
     if e["kind"] == "drums":
         for name, p in e["pieces"].items():
-            print(f"  {name:<11} ノート {p['notes']}  {p['synthdef']}  {p['params']}")
+            print(f"  {name:<11} ノート {p['notes']}  {p.get('sample') or p.get('synth')}  {p['params']}")
     else:
-        print(f"  synthdef={e['synthdef']}" + ("  mono" if e.get("mono") else "") + (f"  sample={e['sample']}" if e.get("sample") else ""))
+        print(f"  {'sample=' + e['sample'] if e.get('sample') else 'synth=' + str(e.get('synth'))}" + ("  mono" if e.get("mono") else ""))
         print(f"  params: {e['params']}")
+        if e.get("fx"):
+            print(f"  fx: {e['fx']}")
     return 0
 
 

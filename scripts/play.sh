@@ -3,7 +3,7 @@
 #   play.sh <file> [--start 秒] [--loop] [--dry-run]   projects/ 配下の音声(wav/mp3/flac/m4a)か MIDI(.mid)を再生
 #   play.sh --list <song>                                曲の聴けるファイルを一覧する
 # 音声は mpv(ターミナル操作: スペース=一時停止、←→=5秒移動、↑↓=音量、q=終了)。
-# MIDI(projects/<song>/tracks/*.mid)は SuperCollider で一時 wav に合成してから mpv で再生する(音色は spec の patch)。
+# MIDI(projects/<song>/tracks/*.mid)は Sonic Pi で一時 wav に合成(実時間録音)してから mpv で再生する(音色は spec の patch)。
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"

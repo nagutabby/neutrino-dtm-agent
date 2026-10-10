@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 環境確認: uv / NEUTRINO / SuperCollider / ffmpeg / MuseScore
+# 環境確認: uv / NEUTRINO / Sonic Pi / ffmpeg / MuseScore
 set -u
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -11,7 +11,9 @@ MISSING=0
 echo "■ 環境チェック"
 if command -v uv >/dev/null; then ok "uv"; else ng "uv(brew install uv)"; fi
 if command -v ffmpeg >/dev/null; then ok "ffmpeg"; else ng "ffmpeg(brew install ffmpeg)"; fi
-if [ -x "${SCLANG:-}" ] || command -v sclang >/dev/null || [ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]; then ok "SuperCollider(sclang。シンセ合成)"; else ng "SuperCollider(brew install --cask supercollider。標準外の場所なら .env に SCLANG=/path/to/sclang)"; fi
+SONIC_PI_APP_DIR="${SONIC_PI_APP:-/Applications/Sonic Pi.app}"
+if [ -f "$SONIC_PI_APP_DIR/Contents/Resources/app/server/ruby/bin/headless_boot.rb" ]; then ok "Sonic Pi(シンセ合成。ヘッドレスで実時間録音)"; else ng "Sonic Pi(brew install --cask sonic-pi。標準外の場所なら .env に SONIC_PI_APP=/path/to/'Sonic Pi.app')"; fi
+if command -v ruby >/dev/null || [ -x "${SONIC_PI_RUBY:-}" ]; then ok "ruby(Sonic Pi の録音スクリプト用)"; else ng "ruby(brew install ruby。または .env に SONIC_PI_RUBY)"; fi
 if command -v mpv >/dev/null; then ok "mpv(試聴: scripts/play.sh)"; else ng "mpv(brew install mpv)"; fi
 if command -v yt-dlp >/dev/null; then ok "yt-dlp(参考曲の分析用)"; else echo "  - yt-dlp 未導入(参考曲の分析を使うなら brew install yt-dlp)"; fi
 if [ -x "$NEUTRINO_DIR/bin/neutrino" ] && [ -x "$NEUTRINO_DIR/bin/musicXMLtoLabel" ]; then

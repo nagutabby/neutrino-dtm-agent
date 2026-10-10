@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""トラック MIDI を SuperCollider(非リアルタイム=NRT)でゼロから合成して wav にする。
+"""トラック MIDI を Sonic Pi の内蔵シンセでゼロから合成して wav にする(実時間で録音)。
 
   synth_render.py <song> <name> [--out PATH] [--dry-run]    tracks/<name>.mid -> stems/<name>.wav
 
-流れ: MIDI を読む -> spec の patch / patch_params で音色を決める -> ボイス列を .scd に書く -> sclang が Score.recordNRT で wav を書く。
-SynthDef とパッチ一覧は曲ごと(projects/<song>/synth/)。他の曲の音色は流用しない。
-サンプルはユーザーが用意した wav(projects/<song>/samples/)を patches.yaml の sample で指定したときだけ。SoundFont は使わない。
+流れ: MIDI を読む -> spec の patch / patch_params で音色を決める -> ボイス列を Sonic Pi の Ruby コードに書く
+-> ヘッドレスの Sonic Pi で実行しながら録音(sonicpi.py)-> ffmpeg で 16bit wav にする。
+パッチ一覧は曲ごと(projects/<song>/synth/patches.yaml)。他の曲の音色は流用しない。
+サンプルはユーザーが用意した wav(projects/<song>/samples/)を patches.yaml の sample で指定したときだけ。
+Sonic Pi には非リアルタイム書き出しがないため、レンダリングには曲の長さ分の時間がかかる(録音中は音が鳴る)。
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import shutil
 import subprocess
@@ -23,21 +24,14 @@ from pathlib import Path
 
 import mido
 import patches
+import sonicpi
 from common import ROOT, load_dotenv, load_specs, require_project
 
 load_dotenv()
 
-SAMPLE_RATE = 48000
 TAIL = 1.0  # 最後の音のあとに残す余韻(秒)
 MONO_GAP = 0.02  # mono パッチで、この秒数以内に次の音が始まれば同じ音のままグライドする
-SC_APP = Path("/Applications/SuperCollider.app/Contents")
-
-
-def find_sclang() -> str | None:
-    for c in (os.environ.get("SCLANG"), shutil.which("sclang"), str(SC_APP / "MacOS" / "sclang")):
-        if c and Path(c).is_file() and os.access(c, os.X_OK):
-            return c
-    return None
+DEFAULT_GLIDE = 0.08  # mono パッチで params に note_slide が無いときのグライド秒
 
 
 def read_notes(mid: Path) -> list[dict]:
@@ -77,7 +71,7 @@ def wav_seconds(path: str) -> float:
 
 def sample_fields(holder: dict, note: int, proj: Path | None) -> dict:
     """sample を持つパッチ(またはドラムのピース)のボイスに足す項目。sample が無ければ空。
-    rate は root_note があればノートの高さに合わせ、無ければ 1(ワンショット)。tail=再生が終わるまでの秒数。"""
+    rate は root_note があればノートの高さに合わせ、無ければ params のまま(ワンショット)。tail=再生が終わるまでの秒数。"""
     rel = holder.get("sample")
     if rel is None:
         return {}
@@ -85,13 +79,14 @@ def sample_fields(holder: dict, note: int, proj: Path | None) -> dict:
         raise ValueError("サンプルのパッチには曲のディレクトリ(proj)が必要です")
     path = str((proj / rel).resolve())
     root = holder.get("root_note")
-    rate = 2 ** ((note - int(root)) / 12) if root is not None else 1.0
+    rate = 2 ** ((note - int(root)) / 12) if root is not None else float((holder.get("params") or {}).get("rate", 1.0))
     return {"sample": path, "rate": round(rate, 6), "tail": wav_seconds(path) / rate}
 
 
 def build_voices(notes: list[dict], entry: dict, overrides: dict, proj: Path | None = None) -> list[dict]:
-    """ノート列 -> ボイス列。voice = {start, def, release(None=自然に消える), controls, sets[(t, freq)]}。
-    サンプルのパッチは voice に sample(絶対パス)と tail が付き、controls に rate が入る(buf は write_scd が割り当てる)。"""
+    """ノート列 -> ボイス列。
+    voice = {start, synth|sample, opts, end(None=ワンショット), sets[(t, note)], sweep, tail}。
+    opts は Sonic Pi の引数(amp はベロシティを掛けた値)。サンプルのパッチは sample(絶対パス)と tail が付く。"""
     params = resolve(entry, overrides)
     voices: list[dict] = []
     if entry["kind"] == "drums":
@@ -106,105 +101,120 @@ def build_voices(notes: list[dict], entry: dict, overrides: dict, proj: Path | N
             sm = sample_fields(piece, n["note"], proj)
             if sm:
                 c["rate"] = sm["rate"]
-            voices.append({"start": n["start"], "def": piece["synthdef"], "release": None, "controls": c, "sets": [],
-                           **({"sample": sm["sample"], "tail": sm["tail"]} if sm else {})})
+            voices.append({"start": n["start"], "end": None, "opts": c, "sets": [], "sweep": piece.get("sweep"),
+                           **({"sample": sm["sample"], "tail": sm["tail"]} if sm else {"synth": piece["synth"]})})
         return voices
 
-    oneshot = bool(entry.get("oneshot"))
+    oneshot = bool(entry.get("oneshot")) or bool(entry.get("sample"))
     for n in notes:
         c = dict(params)
         c["amp"] = round(c.get("amp", 0.4) * (n["vel"] / 127), 5)
-        c["freq"] = round(mtof(n["note"]), 4)
-        if entry.get("uses_dur"):
-            c["dur"] = round(n["end"] - n["start"], 4)
         sm = sample_fields(entry, n["note"], proj)
         if sm:
             c["rate"] = sm["rate"]
+        else:
+            c["note"] = n["note"]
+            if entry.get("mono"):
+                c.setdefault("note_slide", DEFAULT_GLIDE)
         prev = voices[-1] if voices else None
-        if entry.get("mono") and not oneshot and prev and prev["release"] is not None and n["start"] <= prev["release"] + MONO_GAP:
-            prev["sets"].append((n["start"], c["freq"]))
-            prev["release"] = n["end"]
+        if entry.get("mono") and not oneshot and prev and prev["end"] is not None and n["start"] <= prev["end"] + MONO_GAP:
+            prev["sets"].append((n["start"], n["note"]))
+            prev["end"] = n["end"]
             continue
         voices.append({
-            "start": n["start"], "def": entry["synthdef"], "controls": c, "sets": [],
-            "release": None if oneshot else n["end"],
-            **({"sample": sm["sample"], "tail": sm["tail"]} if sm else {}),
+            "start": n["start"], "opts": c, "sets": [], "sweep": None,
+            "end": None if oneshot else n["end"],
+            **({"sample": sm["sample"], "tail": sm["tail"]} if sm else {"synth": entry["synth"]}),
         })
     return voices
 
 
-def sc_symbol(name: str) -> str:
-    if not re.fullmatch(r"[A-Za-z0-9_]+", name):
-        raise ValueError(f"SuperCollider の名前に使えない文字: {name!r}")
-    return "\\" + name
-
-
-def sc_str(s: str) -> str:
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+def envelope_total(opts: dict) -> float:
+    """固定長のエンベロープ(ワンショット)が鳴り終わるまでの秒数。"""
+    return sum(float(opts.get(k, d)) for k, d in (("attack", 0.0), ("decay", 0.0), ("sustain", 0.0), ("release", 1.0)))
 
 
 def end_time(voices: list[dict]) -> float:
     """最後の音が消えるまでの秒数(リリース・固定長の減衰を含む)。"""
     end = 0.0
     for v in voices:
-        tail = float(v["controls"].get("rel", 0.5)) if v["release"] is not None else max(
-            [float(x) for k, x in v["controls"].items() if k in ("decay", "rel")] or [1.0]) * 1.2
-        end = max(end, (v["release"] if v["release"] is not None else v["start"]) + tail)
+        if v["end"] is not None:
+            end = max(end, v["end"] + float(v["opts"].get("release", 1.0)))
+        else:
+            end = max(end, v["start"] + envelope_total(v["opts"]))
         if "tail" in v:  # サンプルは最後まで鳴らす
             end = max(end, v["start"] + v["tail"])
     return end + TAIL
 
 
-def score_events(voices: list[dict]) -> list[tuple]:
-    """ボイス列 -> 時刻順のイベント (time, kind, id, def, controls)。kind: 0=new 1=set 2=release。
-    SuperCollider 側では並べ替えない(同時刻の順序を Python で確定させる)。"""
-    ev: list[tuple] = []
+def rb_sym(name: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9_]+", name):
+        raise ValueError(f"Sonic Pi の名前に使えない文字: {name!r}")
+    return ":" + name
+
+
+def rb_str(s: str) -> str:
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("#", "\\#") + '"'
+
+
+def rb_opts(opts: dict) -> str:
+    return ", ".join(f"{rb_sym(k)[1:]}: {float(x)!r}" for k, x in opts.items())
+
+
+def _num(x: float) -> str:
+    return repr(round(float(x), 4))
+
+
+def voice_lines(voices: list[dict]) -> list[str]:
+    """ボイス列 -> 時刻順の Ruby の行(sleep で時間を進めながら synth / sample を鳴らす)。
+    同時刻の順序は Python で確定させる。Sonic Pi の既定テンポ(60 BPM)では 1 拍 = 1 秒。"""
+    lines: list[str] = []
+    ev: list[tuple] = []  # (time, order, voice index, payload)
     for i, v in enumerate(voices):
-        vid = 1000 + i
-        ev.append((v["start"], 0, vid, v["def"], v["controls"]))
-        ev += [(t, 1, vid, "", {"freq": f}) for t, f in v["sets"]]
-        if v["release"] is not None:
-            ev.append((v["release"], 2, vid, "", {}))
-    return sorted(ev, key=lambda e: (e[0], e[1], e[2]))
-
-
-def write_scd(path: Path, voices: list[dict], duration: float, osc: Path, out: Path, defs: Path) -> None:
-    samples = sorted({v["sample"] for v in voices if "sample" in v})  # サンプル wav -> バッファ番号(0〜)
-    for v in voices:
+        ev.append((v["start"], 0, i, None))
+        ev += [(t, 1, i, nt) for t, nt in v["sets"]]
+    ev.sort(key=lambda e: (e[0], e[1], e[2]))
+    now = 0.0
+    for t, kind, i, payload in ev:
+        tr = round(t, 4)  # 丸めた時刻の差を sleep にして、誤差を積み上げない
+        if tr - now > 1e-6:
+            lines.append(f"sleep {_num(tr - now)}")
+            now = tr
+        v = voices[i]
+        if kind == 1:
+            lines.append(f"control v{i}, note: {float(payload)!r}")
+            continue
+        o = dict(v["opts"])
+        if v["end"] is not None:  # 音の長さに合わせて保持部を決める(リリースはそのあとに鳴る)
+            o["sustain"] = round(max(v["end"] - v["start"] - float(o.get("attack", 0)) - float(o.get("decay", 0)), 0.0), 4)
+        ref = f"v{i} = " if (v["sets"] or v["sweep"]) else ""
         if "sample" in v:
-            v["controls"]["buf"] = samples.index(v["sample"])
-    bufs_src = "\n".join(f"score.add([0.0, ['/b_allocRead', {i}, {sc_str(f)}]]);" for i, f in enumerate(samples))
-    lines = []
-    for t, kind, vid, d, ctl in score_events(voices):
-        c = ", ".join(f"{sc_symbol(k)}, {float(x)!r}" for k, x in ctl.items())
-        lines.append(f"[{t!r}, {kind}, {vid}, {sc_symbol(d) if d else 'nil'}, [{c}]]")
-    events_src = ",\n".join(lines)
-    used = sorted({v["def"] for v in voices})
-    used_src = ", ".join(sc_symbol(u) for u in used)
-    path.write_text(
-        f"""(
-var defs = {sc_str(str(defs))}.load;
-var byName = ();
-var events = [
-{events_src}
-];
-var score = List.new;
-var opts = ServerOptions.new.sampleRate_({SAMPLE_RATE}).numOutputBusChannels_(2).numInputBusChannels_(0).memSize_(131072);
-defs.do {{ |d| byName[d.name.asSymbol] = d }};
-[{used_src}].do {{ |n| score.add([0.0, ['/d_recv', byName[n].asBytes]]) }};
-{bufs_src}
-events.do {{ |e|
-	case
-	{{ e[1] == 0 }} {{ score.add([e[0], ['/s_new', e[3], e[2], 0, 0] ++ e[4]]) }}
-	{{ e[1] == 1 }} {{ score.add([e[0], ['/n_set', e[2]] ++ e[4]]) }}
-	{{ true }} {{ score.add([e[0], ['/n_set', e[2], \\gate, 0]]) }};
-}};
-score.add([{duration!r}, ['/c_set', 0, 0]]);
-Score.recordNRT(score, {sc_str(str(osc))}, {sc_str(str(out))}, nil, {SAMPLE_RATE}, "WAV", "int16", opts, duration: {duration!r}, action: {{ 0.exit }});
-)
-""",
-        encoding="utf-8",
-    )
+            lines.append(f"{ref}sample {rb_str(v['sample'])}, {rb_opts(o)}")
+        else:
+            if v["sweep"]:
+                o["note_slide"] = float(v["sweep"]["time"])
+            lines.append(f"{ref}synth {rb_sym(v['synth'])}, {rb_opts(o)}")
+        if v["sweep"]:
+            lines.append(f"control v{i}, note: {float(v['sweep']['note'])!r}")
+    return lines
+
+
+def build_code(voices: list[dict], duration: float, fx: list[dict] | None = None) -> str:
+    """ボイス列 -> Sonic Pi のコード全体。fx は外側から順に with_fx で包む。曲の終わりまで sleep して余韻(FX の尾)を残す。"""
+    body = voice_lines(voices)
+    last = sum(float(ln.split()[1]) for ln in body if ln.startswith("sleep "))
+    body.append(f"sleep {_num(max(duration - last, 0.0))}")
+    pad = "  "
+    out = ["use_bpm 60", "use_random_seed 0"]
+    depth = 0
+    for f in fx or []:
+        opts = rb_opts(f.get("params") or {})
+        out.append(f"{pad * depth}with_fx {rb_sym(f['name'])}{', ' + opts if opts else ''} do")
+        depth += 1
+    out += [pad * depth + ln for ln in body]
+    for d in reversed(range(depth)):
+        out.append(f"{pad * d}end")
+    return "\n".join(out) + "\n"
 
 
 def peak_db(wav_path: Path) -> float | None:
@@ -259,37 +269,33 @@ def render(song: str, name: str, out: Path | None = None, dry_run: bool = False)
     if out is None and target.exists():
         sys.exit(f"[エラー] 既に存在します(上書きしません): {target.relative_to(ROOT)}")
     print(f"■ {name}: パッチ {pid}({reg[pid]['name']})・{len(voices)} ボイス・約{duration:.1f}秒")
-    synthesize(voices, duration, target, patches.synthdefs_path(song), dry_run)
+    synthesize(voices, duration, target, reg[pid].get("fx"), dry_run)
     return target
 
 
-def synthesize(voices: list[dict], duration: float, target: Path, defs: Path, dry_run: bool = False) -> None:
-    """ボイス列を sclang(NRT)で target の wav にする。ピークを表示する。"""
-    sclang = find_sclang()
+def synthesize(voices: list[dict], duration: float, target: Path, fx: list[dict] | None = None, dry_run: bool = False) -> None:
+    """ボイス列を Sonic Pi で鳴らしながら録音し、16bit wav の target にする。ピークを表示する。"""
+    code = build_code(voices, duration, fx)
     if dry_run:
-        print(f"[dry-run] sclang で {target} に合成(sclang={sclang or '未検出'})")
+        print(f"[dry-run] Sonic Pi で約{duration:.1f}秒録音して {target} に書く(Sonic Pi={sonicpi.find_app() or '未検出'})")
         return
-    if not sclang:
-        sys.exit("[エラー] sclang が見つかりません。SuperCollider を入れてください(brew install --cask supercollider)。"
-                 "場所が標準でなければ .env に SCLANG=/path/to/sclang を設定")
-
+    if not shutil.which("ffmpeg"):
+        sys.exit("[エラー] ffmpeg が見つかりません(brew install ffmpeg)")
     target.parent.mkdir(parents=True, exist_ok=True)
+    print(f"  Sonic Pi で録音中(約{duration:.0f}秒+起動。録音中は音が鳴ります)…")
     with tempfile.TemporaryDirectory() as td:
-        scd, osc = Path(td) / "render.scd", Path(td) / "score.osc"
-        tmp_wav = Path(td) / "out.wav"
-        write_scd(scd, voices, duration, osc, tmp_wav, defs)
-        try:
-            r = subprocess.run([sclang, str(scd)], capture_output=True, text=True, timeout=600, env=os.environ.copy())
-        except subprocess.TimeoutExpired:
-            sys.exit("[エラー] sclang が 10 分で終わりませんでした(SuperCollider の起動を確認してください)")
-        if not tmp_wav.is_file() or tmp_wav.stat().st_size < 1000:
-            tail = "\n".join((r.stdout + r.stderr).strip().splitlines()[-15:])
-            sys.exit(f"[エラー] 合成に失敗しました(wav が出ていません)。sclang の出力末尾:\n{tail}")
-        shutil.copyfile(tmp_wav, target)
+        raw = Path(td) / "rec.wav"
+        sonicpi.record(code, duration, raw)
+        r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-ar", "48000", "-c:a", "pcm_s16le", str(target)],
+                           capture_output=True, text=True)
+        if r.returncode != 0 or not target.is_file():
+            sys.exit(f"[エラー] wav の変換に失敗しました:\n{r.stderr.strip()}")
     pk = peak_db(target)
     if pk is not None:
         msg = f"ピーク {pk:.1f} dBFS"
-        if pk > -0.5:
+        if pk == float("-inf"):
+            msg += "  [注意] 無音です。パッチの synth / params(amp など)を確認してください"
+        elif pk > -0.5:
             msg += "  [注意] クリップしています。patch_params の amp を下げるか velocity を下げて再生成してください"
         print(msg)
     print(f"出力: {target.relative_to(ROOT) if target.is_relative_to(ROOT) else target}")
