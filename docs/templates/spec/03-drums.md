@@ -5,6 +5,7 @@ depends_on: [01-structure]
 params:
   pattern: basic-8beat
   swing: 0
+  rhythm: {}  # ghost push など。ベロシティを一律にしない(viewpoints #13)
   velocity: {kick: 100, snare: 95, hihat: 70}
 decisions: []  # {date, version, note}
 open_questions: []

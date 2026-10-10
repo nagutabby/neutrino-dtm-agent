@@ -3,6 +3,7 @@
 # stems/ にあるトラック(NN_<track>_vN.wav)を、トラックごとに最新版で ffmpeg で重ねて mix/step<step>_vN.wav を作る。
 # ボーカルは output/<song>.wav を stems/ に NN_vocal_vN.wav としてコピーしておく。トラック数は spec(ジャンル)で変わる。
 # 版を固定する: mix_tracks.sh <song> <step> [track=N ...]
+# トラックを除く: exclude=vocal[,fx]。除いたミックスは mix/step<step>_inst_vN.wav(ボーカル抜きでも曲として成立するかの確認用)
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -28,6 +29,7 @@ d = pathlib.Path(sys.argv[1])
 # stems/<NN>_<track>_v<N>.wav のうち、トラックごとに最新版を使う(NN 順に重ねる)。
 # 版の固定: mix_tracks.sh <song> <step> drums=1 chords=2 のように track=N を後ろに並べる
 pins = dict(a.split("=", 1) for a in sys.argv[4:] if "=" in a)
+excluded = set(filter(None, pins.pop("exclude", "").split(",")))
 found = {}
 for f in sorted((d / "stems").glob("*_v*.wav")):
     m = re.fullmatch(r"(\d{2})_([a-z0-9-]+)_v(\d+)\.wav", f.name)
@@ -35,6 +37,8 @@ for f in sorted((d / "stems").glob("*_v*.wav")):
         continue
     num, track, ver = m.group(1), m.group(2), int(m.group(3))
     if num == "09":
+        continue
+    if track in excluded:
         continue
     if track in pins and str(ver) != pins[track]:
         continue
@@ -66,9 +70,11 @@ for f in "${INPUTS[@]}"; do
   ARGS+=(-i "$f")
 done
 
+PREFIX="step${STEP}"
+for x in "$@"; do case "$x" in exclude=*) PREFIX="step${STEP}_inst" ;; esac; done
 N=1
-while [ -e "$D/mix/step${STEP}_v${N}.wav" ]; do N=$((N + 1)); done
-OUT="$D/mix/step${STEP}_v${N}.wav"
+while [ -e "$D/mix/${PREFIX}_v${N}.wav" ]; do N=$((N + 1)); done
+OUT="$D/mix/${PREFIX}_v${N}.wav"
 echo "ミックス対象(トラックごとに最新版):"; printf '  %s\n' "${INPUTS[@]#"$ROOT"/}"
 
 # 09-mix が ready なら音量・パンを反映。そうでなければ従来どおり均等に重ねる

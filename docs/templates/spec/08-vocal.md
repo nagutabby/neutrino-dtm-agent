@@ -8,6 +8,7 @@ params:
   transpose: 0
   sampling_rate: 48000
   bit_depth: 16
+  rhythm: {}  # pickup(食い) syncopation(裏拍の割合) note_values phrase_end。全音が拍頭・同音価にしない(viewpoints #13)
 decisions: []  # {date, version, note}
 open_questions: []
 ---
