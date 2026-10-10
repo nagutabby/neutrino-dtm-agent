@@ -8,7 +8,7 @@
 ```
 
 1. `scripts/new_song.sh`(名前は `日付-連番` で自動)で `projects/<song>/` と spec 雛形を作る
-2. 参考曲の URL → `/reference`、ジャンル・曲の長さ・歌/インスト・進め方を聞く(`coach-start`)
+2. 参考曲の URL(最低3つ) → `/reference`、ジャンル・曲の長さ・歌/インスト・進め方を聞く(`coach-start`)
 3. `genre-research` でジャンルを調べ、`genre_apply.py <song> <genre> --length-seconds N --run-mode step|auto` でトラック計画・音色(patch)を反映。登録簿にない patch はエラー(`patches.py check <song>`)
 4. `spec_status.py <song>` で次に決められる要素を確認し、要素ごとに spec を決める(`spec-propose`)→ `decide.py <song> <spec>`
 5. ready の spec から MIDI を作り、`register_track.py <song> <spec> <midi>` で版と spec_version を記録
@@ -26,4 +26,4 @@
 
 スクリプト側のガード: ファイル名引数(トラック名・basename・モデル名)に `/` や `..` は使えない。`mix_tracks.sh` の step は数字のみ。`register_track.py` は別の曲の `projects/<other>/` 配下の MIDI を拒否する。
 
-参考曲がある場合: spec 立案の前に `/reference` で雰囲気を分析し(YouTube 取得 → 音源分離 → 音声の分析 → ジャンル確定後に類似曲を Web 検索して同じ手順で分析 → `reference_summary.py` で共通点をまとめる)、`spec/00-concept.md` に反映する(`docs/reference-analysis.md`)。
+参考曲がある場合: spec 立案の前に `/reference` で雰囲気を分析し(YouTube 取得 → 音源分離 → 音声の分析 → 参考曲3曲以上を同じ手順で分析 → `reference_summary.py` で共通点をまとめる)、`spec/00-concept.md` に反映する(`docs/reference-analysis.md`)。

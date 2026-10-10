@@ -63,11 +63,12 @@
 4. **提示**: トラック**単体**の試聴物と、Step 1〜N の**累積ミックス**の2本。パスと聴きどころ(何秒付近の何に注目)を示し、**そのまま貼れる再生コマンド**(`! scripts/play.sh <path> [--start 秒]`)を添える。
 5. **技術解説(必須)**: なぜそう聞こえるかを、**音楽理論(度数・コード機能・終止・声部連結・コードトーンなど)**と、音域・ベロシティ・ノート長・拍の位置・音色・パン・音量・StyleShift などの**数値付き**で説明する。累積ミックスでは前のトラックとのかみ合わせも説明する。理論は `docs/music-theory.md`、数値の辞書は `docs/technique-notes.md` を参照。理論用語は初出時に括弧で補い、一度に出すのは最大2つ。
 6. **進行確認**(`run_mode: step` のみ): `AskUserQuestion` で「次へ / 修正 / やり直し / 自分で直す」を確認し、答えを受けてから次のトラックへ。`auto` では確認せず次へ進み、最後にまとめて提示する。
-7. **記録**: 学んだ技術と決定を `notes.md` に追記。承認の記録や承認用ファイルはない(生成物は版番号 `v1, v2…` で残り、ミックスは各トラックの最新版を使う。固定は `mix_tracks.sh <song> <step> track=N`)。
+7. **AI らしさチェック**: 最終ミックス後(`step` は累積ミックスごと)に `uv run --group reference scripts/ai_check.py <song> --all` を実行し、ループの貼り合わせ・起伏のなさ・機械的な強弱・帯域の偏り・ステレオの狭さなどを確認する(`docs/ai-music-pitfalls.md`、`ai-check` スキル)。警告は黙って直さず spec の差分案で示す。
+8. **記録**: 学んだ技術と決定を `notes.md` に追記。承認の記録や承認用ファイルはない(生成物は版番号 `v1, v2…` で残り、ミックスは各トラックの最新版を使う。固定は `mix_tracks.sh <song> <step> track=N`)。
 
 ## 初心者モードの振る舞い(`MODE=beginner` 既定)
 
-1. 最初の応答で、次の5問を順に聞く(`coach-start`): ①**参考にする曲の YouTube リンク**(複数可) ②**ジャンル** ③**曲の長さ** ④歌あり/インスト(`vocal`。インストなら歌詞・ボーカルは作らない) ⑤**進め方**(ステップごと / すべて作り切る = `run_mode`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。ジャンル確定後に `genre-research` → `genre_apply.py` → パッチ検査へ進む。
+1. 最初の応答で、次の5問を順に聞く(`coach-start`): ①**参考にする曲の YouTube リンク(最低3つ)** ②**ジャンル** ③**曲の長さ** ④歌あり/インスト(`vocal`。インストなら歌詞・ボーカルは作らない) ⑤**進め方**(ステップごと / すべて作り切る = `run_mode`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。ジャンル確定後に `genre-research` → `genre_apply.py` → パッチ検査へ進む。
 2. 実行前に「これから何をして、何が出力されるか」を1行で伝える。
 3. 結果報告は「できたこと / 聴きどころ / 次の選択肢」の3点。
 4. 専門用語は初出時に括弧で一言説明。同じ説明は繰り返さず `docs/glossary.md` を案内。
@@ -107,12 +108,12 @@
 
 ## コマンド(`.claude/commands/`)
 
-`/reference <曲名> <YouTube URL>`: 参考曲の YouTube 取得 → 音源分離 → 雰囲気分析(音声から。MIDI の書き起こし・検索はしない)。ジャンル・雰囲気が決まったら Web 検索で類似曲を探し、同じく YouTube 取得・音源分離・分析して、参考曲+類似曲の共通点を few-shot の例にまとめる(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
+`/reference <曲名> <YouTube URL>`: 参考曲の YouTube 取得 → 音源分離 → 雰囲気分析(音声から。MIDI の書き起こし・検索はしない)。ユーザーが挙げた**3曲以上**を同じ手順で分析し、共通点を few-shot の例にまとめる(Web 検索での類似曲探しはしない)(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
 `/new-song`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → パッチ検査 → サウンドチェック(全トラック試奏) → concept 確定まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)
 
-`coach-start` / `genre-research` / `coach-explain` / `coach-review` / `spec-propose` / `spec-revise` / `spec-regenerate` / `layer-track` / `explain-technique`
+`coach-start` / `genre-research` / `coach-explain` / `coach-review` / `spec-propose` / `spec-revise` / `spec-regenerate` / `layer-track` / `ai-check` / `explain-technique`
 
 ## 開発メモ
 

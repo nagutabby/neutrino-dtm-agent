@@ -1,24 +1,19 @@
 ---
-description: YouTube の参考曲と、Web 検索で見つけた類似曲をダウンロード・音源分離・分析し、その共通点を few-shot の例として曲のイメージを固める
-argument-hint: "<曲名> <YouTubeのURL>"
+description: ユーザーが挙げた YouTube の参考曲(最低3つ)をダウンロード・音源分離・分析し、その共通点を few-shot の例として曲のイメージを固める
+argument-hint: "<曲名> <YouTubeのURL> <URL> <URL>..."
 ---
 
-参考曲の分析を行い、ユーザーが作りたい曲のイメージを言葉にする手伝いをする。引数: $ARGUMENTS(`<song> <url>`。足りなければ `AskUserQuestion` で聞く)
+参考曲の分析を行い、ユーザーが作りたい曲のイメージを言葉にする手伝いをする。引数: $ARGUMENTS(`<song> <url>...`。URL は**最低3つ**。足りなければ `AskUserQuestion` で聞く)
 
-方針: **MIDI の検索・取得・書き起こしはしない**。参考曲と「類似曲」を YouTube から取得して**音源分離 → 音声の分析**を行い、複数曲の結果を **few-shot の例**として並べ、共通点から曲の型をつかむ。
+方針: **MIDI の検索・取得・書き起こしはしない**。ユーザーが挙げた参考曲(最低3つ)を YouTube から取得して**音源分離 → 音声の分析**を行い、複数曲の結果を **few-shot の例**として並べ、共通点から曲の型をつかむ。
 
 1. 最初に `docs/reference-analysis.md` の注意(私的な分析のみ・複製しない・公開しない)を1〜2行で伝える。対象は YouTube の単体動画(10 分以内)。
 2. `projects/<song>/` が無ければ `/new-song` を先に案内する。
-3. **参考曲(seed)の分析**: `scripts/reference_run.sh <song> <url> --dry-run` で確認 → 実行(YouTube 取得 → 音源分離 → 分析)。`projects/<song>/reference/<id>/analysis.md` を読む。
-4. **類似曲(similar)の検索**(ジャンルが決まっていること。未定なら先にユーザーに聞く。推測しない):
-   - WebSearch で、ジャンル + 3 の分析から推定した雰囲気(テンポ帯・長調/短調・明るさ・盛り上がり)を語にして、類似曲を探す。例: `lo-fi hip hop 80bpm minor mellow piano youtube`。2〜3 種の語を試す。
-   - **YouTube の単体動画(10 分以内)の URL が確認できる曲**を最大3曲に絞る。「曲名 / アーティスト / URL / どこが雰囲気に近いか」を一覧でユーザーに見せる(`step`: 了承を取ってから取得。`auto`: そのまま取得して後でまとめて報告)。AI が内容を確信できない曲を「似ている」と断定しない。参考曲そのものや、ユーザーが除外した曲は入れない。
-   - 1曲ずつ `scripts/reference_run.sh <song> <url> --role similar`(先に `--dry-run`)で取得・分離・分析する。再生リスト・チャンネル一括取得はしない。
-   - 見つからない/取得できないときは、その旨を伝え、参考曲の分析だけで進める(無理に探し続けない)。
-5. **few-shot の例をまとめる**: `uv run scripts/reference_summary.py <song>` で `reference/summary.md`(曲ごとの数値表+共通点)を作る。例が2曲以上あるときだけ「共通点=この雰囲気の型」と言える。
-6. 次の3点で報告する(参考曲と類似曲を並べ、共通点・違いを整理する):
+3. **参考曲の分析**: URL が3つ未満なら不足分を聞く(3つ揃うまで進めない。Web 検索で類似曲を探して補わない)。1曲ずつ `scripts/reference_run.sh <song> <url> --dry-run` で確認 → 実行(YouTube 取得 → 音源分離 → 分析)。各 `projects/<song>/reference/<id>/analysis.md` を読む。再生リスト・チャンネル一括取得はしない。
+4. **few-shot の例をまとめる**: `uv run scripts/reference_summary.py <song>` で `reference/summary.md`(曲ごとの数値表+共通点)を作る。
+5. 次の3点で報告する(参考曲を並べ、共通点・違いを整理する):
    - **わかったこと**: テンポ・キー(長調/短調)・コード機能の並び・盛り上がりの形・パート比・明るさ・刻みの細かさを、`docs/music-theory.md` の理論で平易に(初出用語は最大2つ、数値付き)。
-   - **聴きどころ**: ユーザーが聴き直して確かめる箇所(何秒付近)。`scripts/play.sh projects/<song>/reference/<id>/stems/piano.wav --start 秒` のような再生コマンドを添える(`scripts/play.sh --list <song>`)。推定の限界(テンポの倍/半分違い、コード推定の取り違え、分離の混ざり、類似曲は参考曲そのものではない)を正直に伝える。
-   - **次の選択肢**: 「この型で行く / 一部だけ取り入れる(例: テンポとコード機能だけ)/ 別の類似曲・別の検索語で探す」(最大3)。
-7. ユーザーが選んだ方向を `spec/00-concept.md` の下書き差分案として示す(ユーザーが了承するまで spec を変更しない)。旋律・歌詞・リズムの丸写しは提案しない。
-8. 結果と学んだ点を `notes.md` に追記する(類似曲の曲名と YouTube URL も)。
+   - **聴きどころ**: ユーザーが聴き直して確かめる箇所(何秒付近)。`scripts/play.sh projects/<song>/reference/<id>/stems/piano.wav --start 秒` のような再生コマンドを添える(`scripts/play.sh --list <song>`)。推定の限界(テンポの倍/半分違い、コード推定の取り違え、分離の混ざり)を正直に伝える。
+   - **次の選択肢**: 「この型で行く / 一部だけ取り入れる(例: テンポとコード機能だけ)/ 参考曲を差し替えて再分析する」(最大3)。
+6. ユーザーが選んだ方向を `spec/00-concept.md` の下書き差分案として示す(ユーザーが了承するまで spec を変更しない)。旋律・歌詞・リズムの丸写しは提案しない。
+7. 結果と学んだ点を `notes.md` に追記する(参考曲の曲名と YouTube URL も)。

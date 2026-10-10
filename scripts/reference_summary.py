@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""参考曲(シード曲+類似曲)の分析結果を1枚にまとめる。few-shot の「例」として spec 立案に使う。
+"""参考曲(ユーザーが挙げた3曲以上)の分析結果を1枚にまとめる。few-shot の「例」として spec 立案に使う。
 
 使い方: reference_summary.py <song>
-  入力: projects/<song>/reference/<id>/analysis.json(reference_run.sh が作る)、source.json、role
+  入力: projects/<song>/reference/<id>/analysis.json(reference_run.sh が作る)、source.json
   出力: projects/<song>/reference/summary.md(曲ごとの数値表+共通点・違い)
 抽象的な特徴(テンポ・キー・コード機能・盛り上がり・パート比)だけを扱う。旋律・歌詞・音符列は出さない。
 """
@@ -18,8 +18,6 @@ from pathlib import Path
 
 from common import require_project
 
-ROLES = {"seed": "参考曲", "similar": "類似曲"}
-
 
 def load_refs(ref_root: Path) -> list[dict]:
     refs = []
@@ -29,21 +27,18 @@ def load_refs(ref_root: Path) -> list[dict]:
             continue
         src_p = d / "source.json"
         src = json.loads(src_p.read_text(encoding="utf-8").splitlines()[0]) if src_p.is_file() else {}
-        role_p = d / "role"
-        role = role_p.read_text(encoding="utf-8").strip() if role_p.is_file() else "seed"
-        refs.append({"id": d.name, "role": role if role in ROLES else "seed", "src": src,
-                     "r": json.loads(a.read_text(encoding="utf-8"))})
+        refs.append({"id": d.name, "src": src, "r": json.loads(a.read_text(encoding="utf-8"))})
     return refs
 
 
 def summarize(refs: list[dict]) -> str:
     rs = [x["r"] for x in refs]
     lines = ["# 参考曲まとめ(few-shot の例。私的な分析用・非公開)", ""]
-    lines += ["| 区分 | 曲 | テンポ | キー | よく出る4小節 | 明るさ(Hz) | 刻み(/秒) |", "|---|---|---|---|---|---|---|"]
+    lines += ["| 曲 | テンポ | キー | よく出る4小節 | 明るさ(Hz) | 刻み(/秒) |", "|---|---|---|---|---|---|"]
     for x in refs:
         r, t = x["r"], x["src"].get("title", x["id"])
         loop = " - ".join(r["loop_4bars"][0]) if r.get("loop_4bars") else "-"
-        lines.append(f"| {ROLES[x['role']]} | {t} | {r['tempo_bpm']:g} | {r['key']} | {loop} | {r['brightness_hz']} | {r['onsets_per_sec']} |")
+        lines.append(f"| {t} | {r['tempo_bpm']:g} | {r['key']} | {loop} | {r['brightness_hz']} | {r['onsets_per_sec']} |")
     lines += ["", "## 共通点(複数の例に共通する傾向だけを次の spec に反映する)", ""]
     if len(rs) >= 2:
         bpm = [r["tempo_bpm"] for r in rs]

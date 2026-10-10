@@ -71,17 +71,16 @@ def test_reference_summary_finds_common_traits(song):
 
     import reference_summary as rs
 
-    def put(rid, role, bpm, key, loop):
+    def put(rid, bpm, key, loop):
         d = song / "reference" / rid
         d.mkdir(parents=True)
-        (d / "role").write_text(role)
         (d / "source.json").write_text(json.dumps({"title": f"t{rid}"}) + "\n")
         (d / "analysis.json").write_text(json.dumps({
             "tempo_bpm": bpm, "key": key, "loop_4bars": [loop, 2], "common_roman": [["I", 3], ["V", 2]],
             "brightness_hz": 2000, "onsets_per_sec": 3.0, "energy_by_eighth": [0.5] * 8,
             "part_balance": {"bass": 0.5, "drums": 0.5}}))
 
-    put("a", "seed", 80, "C 長調", ["I", "V", "vi", "IV"])
-    put("b", "similar", 90, "G 長調", ["I", "V", "vi", "IV"])
+    put("a", 80, "C 長調", ["I", "V", "vi", "IV"])
+    put("b", 90, "G 長調", ["I", "V", "vi", "IV"])
     md = rs.summarize(rs.load_refs(song / "reference"))
-    assert "80〜90 BPM" in md and "長調 2曲" in md and "類似曲" in md and "I - V - vi - IV(2曲)" in md
+    assert "80〜90 BPM" in md and "長調 2曲" in md and "I - V - vi - IV(2曲)" in md
