@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""ジャンル定義(projects/<song>/genre/<id>.md。ジャンル別の定義は予め用意せず、曲ごとに調べて作る)を曲に反映する。
+"""ジャンル定義(projects/<song>/genre/<id>.md。ジャンル別の定義は予め用意せず、曲ごとに調べて作る)と、
+ユーザーが最初に指示した内容(projects/<song>/user_inputs.yaml)を曲に反映する。
 
-  genre_apply.py <song> <genre-id> [--length-seconds N] [--run-mode step|auto] [--tracks a,b,c] [--dry-run]
+  genre_apply.py <song> <genre-id> [--length-seconds N] [--run-mode step|auto] [--dry-run]
   genre_apply.py --list
 
 やること:
   - 00-concept.params に genre / target_seconds / tracks(トラック計画と音色パッチ ID)を書く
-  - --tracks <名前,...> で、ユーザーが選んだ伴奏トラックだけに絞る(ジャンル定義はそのための候補。ボーカル・歌詞は絞らない)
-  - ジャンルのトラック spec を作る(無ければ docs/templates/track-spec.md から)。使わない draft の
-    トラック spec は削除する。各トラック spec の params.patch を設定する
+  - トラックと音(patch)・コード進行は user_inputs.yaml のユーザー指定だけを使う。ジャンル定義の tracks は使わない(AI は補わない・候補を出さない)
+  - user_inputs.yaml の progression を 02-harmony に書く
+  - トラック spec を作る(無ければ docs/templates/track-spec.md から)。ユーザーが指定しなかった draft のトラック spec は削除する
   - 曲の長さをテンポ候補ごとの小節数に換算して表示する
-  - 最後に音色パッチを検査し(patches.py)、登録簿にない/引数が不正なら終了コード 2
+  - 最後に音色パッチを検査し(patches.py。この曲の登録簿だけを見る)、登録簿にない/引数が不正なら終了コード 2
 """
 
 from __future__ import annotations
@@ -21,9 +22,11 @@ import sys
 from datetime import date
 
 import patches
+import yaml
 from common import (
     READY,
     ROOT,
+    SPEC_KEY_RE,
     VOCAL_ONLY,
     load_specs,
     read_spec,
@@ -49,7 +52,33 @@ def bars_for(seconds: float, bpm: float, beats: int = 4) -> int:
     return round(seconds * bpm / 60 / beats)
 
 
-MIN_TRACKS = 10  # ボーカル・歌詞を除く伴奏トラックの最低本数
+def load_user_inputs(proj) -> dict:
+    """projects/<song>/user_inputs.yaml(ユーザーが最初に指示した、トラックの音とコード進行)。不正は終了コード 2。"""
+    f = proj / "user_inputs.yaml"
+    if not f.is_file():
+        sys.exit(f"[エラー] {f.name} がありません(ユーザーの最初の指示を書く。docs/templates/user_inputs.yaml)")
+    data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    errs: list[str] = []
+    tracks = data.get("tracks") or []
+    if not tracks:
+        errs.append("tracks が空です(作るトラックと音はユーザーが指示する。AI は候補を出さない)")
+    seen: set[str] = set()
+    for t in tracks:
+        if not isinstance(t, dict) or not SPEC_KEY_RE.fullmatch(str(t.get("spec", ""))) or not re.fullmatch(r"[a-z0-9-]+", str(t.get("track", ""))):
+            errs.append(f"トラックの書式が不正: {t}(spec: NN-name と track: 英小文字・数字・- が必要)")
+            continue
+        if t["track"] in seen:
+            errs.append(f"track 名が重複: {t['track']}")
+        seen.add(t["track"])
+        if t["track"] != "vocal" and not t.get("patch"):
+            errs.append(f"{t['spec']}: patch がありません(ユーザーが指示した音を synth/ にパッチとして作り、ID を書く)")
+    for c in data.get("progression") or []:
+        if not (isinstance(c, dict) and isinstance(c.get("bars"), int) and c["bars"] > 0 and isinstance(c.get("chord"), str)):
+            errs.append(f"progression の書式が不正: {c}({{bars: 2, chord: Am}} の形)")
+    if errs:
+        print("\n".join(f"[エラー] {e}" for e in errs))
+        sys.exit(2)
+    return data
 
 
 def main() -> None:
@@ -58,7 +87,6 @@ def main() -> None:
     ap.add_argument("genre", nargs="?")
     ap.add_argument("--length-seconds", type=float)
     ap.add_argument("--run-mode", choices=["step", "auto"])
-    ap.add_argument("--tracks", help="作る伴奏トラック名(カンマ区切り。ユーザーの選択。省略時は計画のすべて)")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -74,19 +102,8 @@ def main() -> None:
 
     proj = require_project(a.song)
     prof, _ = read_spec(profile_path(proj, a.genre))
-    tracks = [t for t in prof.get("tracks", []) if isinstance(t, dict) and t.get("spec")]
-    n_acc = len([t for t in tracks if t.get("track") and t["track"] != "vocal"])
-    if n_acc < MIN_TRACKS:
-        print(f"[エラー] 伴奏トラックが {n_acc} 本です(ボーカル・歌詞を除き {MIN_TRACKS} 本以上必要)。ジャンル定義の tracks を足してください")
-        sys.exit(2)
-    if a.tracks:
-        chosen = [x.strip() for x in a.tracks.split(",") if x.strip()]
-        known = {t["track"] for t in tracks if t.get("track") and t["track"] != "vocal"}
-        unknown = [x for x in chosen if x not in known]
-        if unknown or not chosen:
-            print(f"[エラー] 選んだトラックがジャンル定義の候補にありません: {unknown or '(空)'}。候補: {', '.join(sorted(known))}")
-            sys.exit(2)
-        tracks = [t for t in tracks if not t.get("track") or t["track"] == "vocal" or t["track"] in chosen]
+    user = load_user_inputs(proj)
+    tracks = user["tracks"]  # トラックと音はユーザー指定だけ(ジャンル定義の tracks は使わない)
     tempo = prof.get("tempo", {})
     lengths = prof.get("length_seconds", {})
     seconds = a.length_seconds or lengths.get("default")
@@ -115,6 +132,22 @@ def main() -> None:
     if not a.dry_run:
         write_spec(cpath, cmeta, cbody)
 
+    # 02-harmony: ユーザーが指定したコード進行(指定が無ければ触らない。AI は補わない)
+    prog = user.get("progression") or []
+    hpath = spec_dir / "02-harmony.md"
+    if prog and hpath.exists():
+        hmeta, hbody = read_spec(hpath)
+        if hmeta.get("progression") != prog:
+            if hmeta.get("status") == READY and hmeta.get("progression"):
+                hmeta["status"] = "needs-revision"
+                log.append("02-harmony: ユーザー指定の進行が ready の内容と違うため needs-revision に戻しました(下流の再生成が必要)")
+            hmeta["progression"] = prog
+            hmeta.setdefault("decisions", []).append(
+                {"date": date.today().isoformat(), "version": hmeta.get("version", 1), "note": "コード進行はユーザー指定(user_inputs.yaml)"})
+            log.append(f"02-harmony: progression={[c['chord'] for c in prog]}(ユーザー指定)")
+            if not a.dry_run:
+                write_spec(hpath, hmeta, hbody)
+
     # トラック spec の作成・更新
     for t in tracks:
         key, trk = t["spec"], t.get("track")
@@ -129,6 +162,11 @@ def main() -> None:
             if trk == "vocal" or not pt:
                 continue
             p = meta.setdefault("params", {})
+            if t.get("sound") and meta.get("sound") != t["sound"]:
+                meta["sound"] = t["sound"]  # ユーザーの言葉(音を作る根拠)
+                log.append(f"{key}: sound=ユーザー指示を記録")
+                if not a.dry_run:
+                    write_spec(path, meta, body)
             if p.get("patch") != pt:
                 changed = p.get("patch") is not None  # 以前に決めた音色を変える場合だけ見直し扱い
                 p["patch"] = pt
@@ -143,7 +181,9 @@ def main() -> None:
         else:
             tmeta, tbody = read_spec(TEMPLATE)
             tmeta.update({"label": t.get("label", key), "track": trk})
-            tmeta["params"]["patch"] = pt or patches.defaults().get(trk, "")
+            if t.get("sound"):
+                tmeta["sound"] = t["sound"]  # ユーザーの言葉(音を作る根拠)
+            tmeta["params"]["patch"] = pt
             if trk == "vocal":
                 tmeta["params"] = {}
             tmeta["decisions"] = [{"date": date.today().isoformat(), "version": 1, "note": f"ジャンル {prof['id']} のトラック計画から作成"}]

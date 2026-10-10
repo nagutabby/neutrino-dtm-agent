@@ -1,0 +1,16 @@
+# この曲(プロジェクト)専用の音色の登録簿。実体は synthdefs.scd(同じ synth/ 内)。
+# 他の曲の音色は流用しない。ユーザーが指定した音だけを登録する。
+# params のキー = SynthDef の引数名、値 = 既定。amp=音量(0〜1)、pan=定位(-1〜1)。
+# kind: melodic = ノートごとに音程を変えて鳴らす / drums = ノート番号で打楽器を切り替える。
+# 任意: mono(音が続くと音程だけ滑らせる)/ oneshot(ノート長に関わらず鳴り切る)/ uses_dur(dur 引数を渡す)
+# サンプル(ユーザーが用意した wav のみ): sample: samples/<file>.wav と、任意で root_note: <MIDI ノート番号>
+#   (root_note があればノートの高さに合わせて rate を変える。無ければ rate=1)。SynthDef に buf と rate が必要。
+#   drums は各ピースに sample を書ける。
+# 例:
+#   my_bass:
+#     name: 名前
+#     kind: melodic
+#     synthdef: my_bass
+#     desc: ユーザーの指示(原文の要約)
+#     params: {amp: 0.5, pan: 0, cutoff: 900}
+patches: {}

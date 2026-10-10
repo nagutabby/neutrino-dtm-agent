@@ -3,7 +3,7 @@ name: layer-track
 description: トラックを1本ずつ作り、単体+累積ミックスを提示し、技術解説する固定フロー。run_mode が step なら1本ごとに確認し、auto なら最後にまとめて提示する。
 ---
 
-前提: サウンドチェック(`patch_audition.py <song>` で全トラックの試奏 wav を作成済み・音色確認済み。AGENTS.md「サウンドチェック」)。`00-concept.params.tracks`(ジャンルのトラック計画)にあるトラックだけを作る。`patches.py check <song>` が通っていること。
+前提: サウンドチェック(`patch_audition.py <song>` で全トラックの試奏 wav を作成済み・音色確認済み。AGENTS.md「サウンドチェック」)。`00-concept.params.tracks`(ユーザーが最初に指示したトラック。`user_inputs.yaml` 由来)にあるトラックだけを作り、AI が足さない。`patches.py check <song>` が通っていること。
 
 予告 → 生成(ready の spec のみ、最大3案) → 検証(`midi_validate.py`/`spec_check.py`) → `register_track.py` → `render_track.sh`(単体 stem。SuperCollider でゼロから合成(これ以外の方法で音を作らない)。音色は spec の `params.patch` / `patch_params` で決まる) → `mix_tracks.sh`(各トラックの最新版を累積) → 提示(パス・聴きどころ・`scripts/play.sh <path> --start 秒` の再生コマンドを単体と累積の2本分) → **技術解説(数値付き)** → 記録(`notes.md`)。
 
