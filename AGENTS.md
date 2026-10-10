@@ -12,7 +12,14 @@
 5. 再生成の範囲(stale になる要素)は実行前に一覧で示し、確認を取る。
 6. ユーザーが自分で MIDI を編集した場合のみ、取り込んで spec を逆更新する提案をする。
 
-詳細: `docs/spec-driven.md`、雛形: `docs/templates/spec/`。状態確認: `uv run scripts/spec_status.py <song>` / `uv run scripts/spec_check.py <song>`。
+**spec の書き方(トークン節約)**: spec は AI が読む文書。人間向けの説明・選択肢の解説・励まし・敬語は書かない。
+- 決定は `params`(機械可読)に入れ、本文は「決定事項の箇条書き」だけにする。1項目1行・体言止め・理由は `decisions` に10〜20字程度で。
+- 初心者向けの解説は spec に書かず、応答(口頭)・`notes.md`・`docs/` に置く。spec に説明を再掲しない。
+- 未決の選択肢は `open_questions` に短く。却下した案・経緯の長文は残さない(`decisions` の1行で足りる)。
+- 新規 spec は `docs/templates/spec/` の見出しと説明文を丸ごと残さず、使う項目だけ残す。
+- spec を読むときは必要な要素だけ(対象と `depends_on`)。全 spec を毎回読み込まない。
+
+詳細: `docs/spec-driven.md`、雛形: `docs/templates/spec/`(枠のみ)、選択肢カタログ: `docs/spec-options.md`(spec-propose 専用)。状態確認: `uv run scripts/spec_status.py <song>` / `uv run scripts/spec_check.py <song>`。
 
 ## プロジェクト(曲)ごとのディレクトリ
 
