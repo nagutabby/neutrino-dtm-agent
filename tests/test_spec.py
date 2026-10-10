@@ -84,3 +84,19 @@ def test_register_rejects_midi_from_other_song(song, tmp_path):
 
         sys.argv = ["register_track.py", "demo", "03-drums", str(other / "x.mid")]
         register_track.main()
+
+
+def test_depends_on_override_per_song(song):
+    import common
+    import spec_check
+    import spec_status
+
+    d = common.require_project("demo")
+    approve_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
+    assert "09-mix" not in spec_status.next_candidates(common.load_specs("demo"))
+    set_meta(d, "09-mix", depends_on=["03-drums", "04-bass", "05-chords", "06-melody"])
+    specs = common.load_specs("demo")
+    assert common.deps_of(specs, "09-mix") == ["03-drums", "04-bass", "05-chords", "06-melody"]
+    assert "09-mix" in spec_status.next_candidates(specs)
+    _, warns = spec_check.check("demo")
+    assert any("09-mix" in w and "上書き" in w for w in warns)

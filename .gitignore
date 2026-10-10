@@ -22,3 +22,7 @@ projects/*/reference/
 *.f0
 *.melspec
 !tests/fixtures/**/*.wav
+
+# SoundFont(権利・容量の都合でコミットしない)
+*.sf2
+*.sf3

@@ -15,6 +15,7 @@ import midi_tools
 from common import (
     SPECS,
     STATUSES,
+    deps_of,
     load_specs,
     midi_to_note,
     note_to_midi,
@@ -31,7 +32,7 @@ def check(song: str) -> tuple[list[str], list[str]]:
     require_project(song)
     specs = load_specs(song)
 
-    for key, (_, deps, _) in SPECS.items():
+    for key, (_, std_deps, _) in SPECS.items():
         if key not in specs:
             warns.append(f"{key}.md がありません(new_song.sh で雛形を展開できます)")
             continue
@@ -40,9 +41,9 @@ def check(song: str) -> tuple[list[str], list[str]]:
             errors.append(f"{key}: status は {'/'.join(STATUSES)} のいずれかにしてください(現在: {meta.get('status')!r})")
         if not isinstance(meta.get("version"), int):
             errors.append(f"{key}: version は整数にしてください")
-        declared = meta.get("depends_on", [])
-        if sorted(declared) != sorted(deps):
-            warns.append(f"{key}: depends_on {declared} が標準の依存 {deps} と異なります")
+        deps = deps_of(specs, key)
+        if sorted(deps) != sorted(std_deps):
+            warns.append(f"{key}: depends_on {deps} が標準の依存 {std_deps} と異なります(この曲だけの上書き)")
         if meta.get("status") == "approved":
             not_ok = [d for d in deps if specs.get(d, ({}, ""))[0].get("status") != "approved"]
             if not_ok:

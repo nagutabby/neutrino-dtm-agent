@@ -13,7 +13,7 @@ import argparse
 import json
 from datetime import date
 
-from common import SPECS, load_specs, read_spec, require_project, write_spec
+from common import SPECS, deps_of, load_specs, read_spec, require_project, write_spec
 
 
 def main() -> None:
@@ -31,7 +31,7 @@ def main() -> None:
 
     if a.track_version is None:
         specs = load_specs(a.song)
-        missing = [d for d in SPECS[a.spec][1] if specs.get(d, ({}, ""))[0].get("status") != "approved"]
+        missing = [d for d in deps_of(specs, a.spec) if specs.get(d, ({}, ""))[0].get("status") != "approved"]
         if missing:
             raise SystemExit(f"依存元が未承認のため承認できません: {', '.join(missing)}")
         meta["status"] = "approved"

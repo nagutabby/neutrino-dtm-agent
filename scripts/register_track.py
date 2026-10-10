@@ -15,6 +15,7 @@ import shutil
 
 from common import (
     SPECS,
+    deps_of,
     load_specs,
     reject_foreign_project,
     require_project,
@@ -35,7 +36,7 @@ def main() -> None:
     reject_foreign_project(a.midi, a.song)
     specs = load_specs(a.song)
     track = SPECS[a.spec][2]
-    needed = [a.spec, *SPECS[a.spec][1]]
+    needed = [a.spec, *deps_of(specs, a.spec)]
     bad = [k for k in needed if specs.get(k, ({}, ""))[0].get("status") != "approved"]
     if bad:
         raise SystemExit(f"approved でない spec があるため登録できません: {', '.join(bad)}")

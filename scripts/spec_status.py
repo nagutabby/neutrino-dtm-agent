@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import argparse
 
-from common import SPECS, load_specs
+from common import SPECS, deps_of, load_specs
 
 
 def next_candidates(specs: dict) -> list[str]:
     out = []
-    for key, (_, deps, _) in SPECS.items():
+    for key in SPECS:
+        deps = deps_of(specs, key)
         st = specs.get(key, ({"status": "draft"}, ""))[0].get("status", "draft")
         if st == "approved":
             continue

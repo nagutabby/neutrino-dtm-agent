@@ -106,6 +106,14 @@ def load_specs(song: str) -> dict[str, tuple[dict, str]]:
     return out
 
 
+def deps_of(specs: dict[str, tuple[dict, str]], key: str) -> list[str]:
+    """spec の依存元。その spec の frontmatter に depends_on があれば曲ごとの上書きとして優先する。"""
+    declared = specs.get(key, ({}, ""))[0].get("depends_on")
+    if isinstance(declared, list) and all(isinstance(d, str) and d in SPECS for d in declared):
+        return declared
+    return SPECS[key][1]
+
+
 def track_files(song: str, track: str) -> list[Path]:
     d = require_project(song) / "tracks"
     return sorted(d.glob(f"*_{track}_v*.mid")) if d.is_dir() else []
