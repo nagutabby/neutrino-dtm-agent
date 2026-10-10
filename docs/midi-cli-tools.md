@@ -6,7 +6,7 @@
 | **MuseScore 4 CLI** | 楽譜 | 安定。MIDI↔MusicXML 変換 | MIDI→MusicXML(**採用**。要インストール) |
 | pretty_midi / symusic | ライブラリ | ノートレベルで解析しやすい。symusic は C++ 実装で高速 | 大量解析が必要になれば検討 |
 | midicsv / csvmidi | CLI | 小さく枯れている。Homebrew で入手可 | 差分確認・手編集(任意) |
-| **FluidSynth** | CLI | 非常に安定。Homebrew `fluid-synth` | 試聴用レンダリング(**採用**) |
+| **SuperCollider** | CLI(sclang / scsynth) | 非リアルタイム(NRT)合成で再現性が高い。`brew install --cask supercollider` | MIDI をゼロから合成して wav 化(**採用**。`scripts/synth_render.py`) |
 | midish | CLI シーケンサ | 枯れているが macOS/Homebrew での入手性は未確認 | 対話的編集(任意・未検証) |
 
-導入: `brew install fluid-synth ffmpeg mpv midicsv shellcheck`、`brew install --cask musescore`(後者は未導入。インストールはユーザー確認の上で)。
+導入: `brew install ffmpeg mpv midicsv shellcheck`、`brew install --cask musescore`(後者は未導入。インストールはユーザー確認の上で)。

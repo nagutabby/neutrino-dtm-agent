@@ -125,7 +125,7 @@ def test_genre_tracks_are_dynamic(song):
 
     d = common.require_project("demo")
     (d / "spec" / "10-fx.md").write_text(
-        "---\nstatus: draft\nversion: 1\nlabel: エフェクト\ntrack: fx\ndepends_on: [01-structure]\nparams:\n  soundfont: gm\n---\n# fx\n",
+        "---\nstatus: draft\nversion: 1\nlabel: エフェクト\ntrack: fx\ndepends_on: [01-structure]\nparams:\n  patch: pluck\n---\n# fx\n",
         encoding="utf-8",
     )
     specs = common.load_specs("demo")

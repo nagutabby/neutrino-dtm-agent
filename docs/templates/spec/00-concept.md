@@ -8,7 +8,7 @@ run_mode: step  # step=1ステップごとに確認 | auto=すべて作り切る
 params:  # genre_apply.py が埋める
   genre: ""  # docs/genres/<id>.md
   target_seconds: 0  # 曲の長さ(秒)。小節数は 01-structure で換算
-  tracks: []  # [{spec, track, soundfont}] ジャンルのトラック計画
+  tracks: []  # [{spec, track, patch}] ジャンルのトラック計画
 level: 1  # 1〜3(docs/learning-path.md)
 decisions: []  # {date, version, note}
 open_questions: []

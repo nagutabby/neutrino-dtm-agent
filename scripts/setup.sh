@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 環境確認: uv / NEUTRINO / fluidsynth / ffmpeg / MuseScore / SoundFont(gm と登録簿の各音源)
+# 環境確認: uv / NEUTRINO / SuperCollider / ffmpeg / MuseScore
 set -u
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -11,7 +11,7 @@ MISSING=0
 echo "■ 環境チェック"
 if command -v uv >/dev/null; then ok "uv"; else ng "uv(brew install uv)"; fi
 if command -v ffmpeg >/dev/null; then ok "ffmpeg"; else ng "ffmpeg(brew install ffmpeg)"; fi
-if command -v fluidsynth >/dev/null; then ok "fluidsynth"; else ng "fluidsynth(brew install fluid-synth)"; fi
+if [ -x "${SCLANG:-}" ] || command -v sclang >/dev/null || [ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]; then ok "SuperCollider(sclang。シンセ合成)"; else ng "SuperCollider(brew install --cask supercollider。標準外の場所なら .env に SCLANG=/path/to/sclang)"; fi
 if command -v uvx >/dev/null && [ -f "$HOME/.cache/huggingface/token" ]; then
   ok "参考曲の書き起こし(uvx + Hugging Face ログイン済み。MuScriptor のライセンス同意は別途必要)"
 else
@@ -31,7 +31,7 @@ if [ -n "${MUSESCORE_BIN:-}" ] && [ -x "$MUSESCORE_BIN" ]; then
 else
   ng "MuseScore 4 CLI(brew install --cask musescore 後、.env に MUSESCORE_BIN を設定)"
 fi
-echo "  SoundFont(曲ごとに必要なものは soundfont.py check <song> で確認。✘ は使う曲があるときだけ必要):"
-(cd "$ROOT" && uv run --quiet scripts/soundfont.py list 2>/dev/null | sed 's/^/   /') || echo "   (uv 未導入のため一覧を省略)"
+echo "  音色(パッチ。曲ごとの検査は patches.py check <song>):"
+(cd "$ROOT" && uv run --quiet scripts/patches.py list 2>/dev/null | sed 's/^/   /') || echo "   (uv 未導入のため一覧を省略)"
 if [ "$MISSING" = 0 ]; then echo "すべて揃っています。"; else echo "不足があります。上の ✘ を解消してください。"; fi
 exit 0

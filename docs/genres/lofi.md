@@ -11,10 +11,10 @@ sections:
   - {name: A2, bars: 8}
   - {name: outro, bars: 4}
 tracks:
-  - {spec: 03-drums, track: drums, label: ドラム, soundfont: gm, role: ゆるいブームバップ。ベロシティを弱めスウィング}
-  - {spec: 04-bass, track: bass, label: ベース, soundfont: gm, role: ルート中心でまろやか。音は短め}
-  - {spec: 05-chords, track: chords, label: エレピ, soundfont: gm, role: 7th/9th のジャジーなコードをゆったり}
-  - {spec: 06-melody, track: melody, label: リード, soundfont: gm, role: ギターやエレピの控えめな旋律}
+  - {spec: 03-drums, track: drums, label: ドラム, patch: kit_acoustic, role: ゆるいブームバップ。ベロシティを弱めスウィング}
+  - {spec: 04-bass, track: bass, label: ベース, patch: bass_saw, role: ルート中心でまろやか。音は短め}
+  - {spec: 05-chords, track: chords, label: エレピ, patch: epiano, role: 7th/9th のジャジーなコードをゆったり}
+  - {spec: 06-melody, track: melody, label: リード, patch: pluck, role: ギターやエレピの控えめな旋律}
 mix_hint: {levels_db: {drums: -5, bass: -5, chords: -6, melody: -8}, loudness_lufs: -16}
 ---
 # 特徴
@@ -23,4 +23,4 @@ mix_hint: {levels_db: {drums: -5, bass: -5, chords: -6, melody: -8}, loudness_lu
 - 音色: エレピ(Rhodes 系)、柔らかいギター、ほこり感のあるドラム。音圧は控えめ
 - 構成: 短いループの繰り返し。展開より雰囲気の持続
 - 長さ: 1〜3分
-- SoundFont: GM の汎用 SoundFont で足りる(ID gm)。エレピは GM の 4・5 番
+- 音色: epiano(index を下げるとまろやか)、pluck の控えめな旋律。ベースは bass_saw の cutoff を下げて丸く

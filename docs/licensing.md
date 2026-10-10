@@ -26,6 +26,5 @@
 - **Demucs**(音源分離): MIT。
 - 取得した音声・分離音・書き起こし MIDI は私的な分析用で、コミット・公開しない(`docs/reference-analysis.md`)。
 
-## SoundFont
-- `.sf2` / `.sf3` は配布元のライセンスに従ってユーザー自身が入手する。リポジトリにコミットしない(`.gitignore` 済み)。エージェントが代わりに取得しない。
-- 必要な音源の種類は `config/soundfonts.yaml`、曲ごとの過不足は `uv run scripts/soundfont.py check <song>` で確認する。
+## シンセ音源
+- 伴奏はサンプル・SoundFont を使わず、SuperCollider(`synth/synthdefs.scd`)でゼロから合成する。第三者の音源ライセンスは発生しない。SuperCollider 自体は GPL(本リポジトリは同梱せず、ユーザーが導入する)。

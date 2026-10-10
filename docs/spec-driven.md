@@ -7,9 +7,9 @@
 **使うトラックはジャンルで決まる**(`docs/genres/<id>.md` → `genre_apply.py` が曲に反映)。使わないトラックの spec ファイルは作らない/削除される。
 
 frontmatter: `status`(draft/ready/needs-revision)、`version`、`depends_on`、`params`(機械可読。spec_check の基準)、`decisions`(決定と理由=学習ログ)、`open_questions`。標準外のトラック spec は `label` / `track` も持つ。
-- `00-concept`: `vocal`、`run_mode`(step/auto)、`params.genre` `params.target_seconds` `params.tracks`(`[{spec, track, soundfont}]`)
+- `00-concept`: `vocal`、`run_mode`(step/auto)、`params.genre` `params.target_seconds` `params.tracks`(`[{spec, track, patch}]`)
 - `01-structure.params`: `key` `scale` `tempo` `time_signature` `bars`(`bars` は `target_seconds × tempo / 60 / 拍子の拍数` から換算)
-- トラック spec の `params`: `range`(`[C1, C3]` のように音名)、`soundfont`(`config/soundfonts.yaml` の ID。省略は concept のトラック計画 → `gm`)、`program`(その SoundFont のプリセット番号)
+- トラック spec の `params`: `range`(`[C1, C3]` のように音名)、`patch`(`config/patches.yaml` の ID。省略は concept のトラック計画 → トラック種別の既定)、`patch_params`(パッチ引数の上書き。ドラムは `{kick: {tune: 45}}`)
 - `09-mix` の `depends_on` の既定は「曲にあるトラック spec すべて」(インストは歌詞・ボーカルを除く)
 
 ## ループ
@@ -22,8 +22,8 @@ frontmatter: `status`(draft/ready/needs-revision)、`version`、`depends_on`、`
 ## 進め方(run_mode)
 `step`=1トラックごとに提示して確認 / `auto`=最後まで作り切って最後にまとめて提示。最初にユーザーに聞き、`00-concept` に記録する。
 
-## SoundFont
-トラックの音源は論理 ID で指定し、登録簿(`config/soundfonts.yaml`)の規則で実ファイルを探す。足りないとき `soundfont.py check` が「どんな SoundFont が必要か」を表示して終了コード 3 を返し、**作業は中断**。
+## 音色(シンセ)
+音はサンプルを使わず SuperCollider でゼロから合成する。トラックは `params.patch` でパッチ ID を指定し、`patch_params` で引数を上書き。登録簿は `config/patches.yaml`、実体は `synth/synthdefs.scd`。`patches.py check <song>` が ID・引数名の誤りを検出する(終了コード 2)。仕組みと各引数の効き方は `docs/synthesis.md`。
 
 ## ルール
 - 生成物(MIDI/MusicXML)を直接直さない。ユーザーが自分で編集した場合のみ、取り込み→spec 逆更新を提案する

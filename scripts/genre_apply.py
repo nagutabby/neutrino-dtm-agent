@@ -5,11 +5,11 @@
   genre_apply.py --list
 
 やること:
-  - 00-concept.params に genre / target_seconds / tracks(トラック計画と SoundFont ID)を書く
+  - 00-concept.params に genre / target_seconds / tracks(トラック計画と音色パッチ ID)を書く
   - ジャンルのトラック spec を作る(無ければ docs/templates/track-spec.md から)。使わない draft の
-    トラック spec は削除する。各トラック spec の params.soundfont を設定する
+    トラック spec は削除する。各トラック spec の params.patch を設定する
   - 曲の長さをテンポ候補ごとの小節数に換算して表示する
-  - 最後に SoundFont を確認し、足りなければ必要な内容を表示して終了コード 3(エージェントは中断する)
+  - 最後に音色パッチを検査し(patches.py)、登録簿にない/引数が不正なら終了コード 2
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import re
 import sys
 from datetime import date
 
-import soundfont
+import patches
 from common import (
     READY,
     ROOT,
@@ -78,7 +78,7 @@ def main() -> None:
 
     spec_dir = proj / "spec"
     specs = load_specs(a.song)
-    plan = [{"spec": t["spec"], "track": t["track"], **({"soundfont": t["soundfont"]} if t.get("soundfont") else {})}
+    plan = [{"spec": t["spec"], "track": t["track"], **({"patch": t["patch"]} if t.get("patch") else {})}
             for t in tracks if t.get("track")]
     keep = {t["spec"] for t in tracks}
     log: list[str] = []
@@ -106,30 +106,31 @@ def main() -> None:
             if not path.exists():
                 log.append(f"[警告] {key}.md がありません(new_song.sh の雛形から補ってください)")
             continue
-        sf = t.get("soundfont")
+        pt = t.get("patch")
         if path.exists():
             meta, body = read_spec(path)
-            if trk == "vocal" or not sf:
+            if trk == "vocal" or not pt:
                 continue
             p = meta.setdefault("params", {})
-            if p.get("soundfont") != sf:
-                changed = p.get("soundfont") is not None  # 以前に決めた音源を変える場合だけ見直し扱い
-                p["soundfont"] = sf
+            if p.get("patch") != pt:
+                changed = p.get("patch") is not None  # 以前に決めた音色を変える場合だけ見直し扱い
+                p["patch"] = pt
+                p.pop("patch_params", None)  # 別パッチの引数名は引き継がない
                 if changed and meta.get("status") == READY:
                     meta["status"] = "needs-revision"
-                    log.append(f"{key}: soundfont={sf} に変更。ready だったので needs-revision に戻しました(再生成が必要)")
+                    log.append(f"{key}: patch={pt} に変更。ready だったので needs-revision に戻しました(再生成が必要)")
                 else:
-                    log.append(f"{key}: soundfont={sf}")
+                    log.append(f"{key}: patch={pt}")
                 if not a.dry_run:
                     write_spec(path, meta, body)
         else:
             tmeta, tbody = read_spec(TEMPLATE)
             tmeta.update({"label": t.get("label", key), "track": trk})
-            tmeta["params"]["soundfont"] = sf or "gm"
+            tmeta["params"]["patch"] = pt or patches.defaults().get(trk, "")
             if trk == "vocal":
                 tmeta["params"] = {}
             tmeta["decisions"] = [{"date": date.today().isoformat(), "version": 1, "note": f"ジャンル {prof['id']} のトラック計画から作成"}]
-            log.append(f"{key}.md を新規作成(track={trk}, soundfont={tmeta['params'].get('soundfont', '-')})")
+            log.append(f"{key}.md を新規作成(track={trk}, patch={tmeta['params'].get('patch', '-')})")
             if not a.dry_run:
                 write_spec(path, tmeta, f"# {t.get('label', key)}\n")
 
@@ -157,10 +158,10 @@ def main() -> None:
         print(f"■ 標準構成(計{total}小節): " + " → ".join(f"{s['name']} {s['bars']}" for s in prof["sections"]) + "(曲の長さに合わせて伸縮)")
     print()
     if a.dry_run:
-        need = sorted({t["soundfont"] for t in tracks if t.get("soundfont") and t.get("track") != "vocal"})
-        print(f"(dry-run)必要な SoundFont ID: {', '.join(need) or 'なし'}。実行後に確認します")
+        need = sorted({t["patch"] for t in tracks if t.get("patch") and t.get("track") != "vocal"})
+        print(f"(dry-run)使う音色パッチ: {', '.join(need) or 'なし'}。実行後に検査します")
         return
-    sys.exit(soundfont.cmd_check(a.song))
+    sys.exit(patches.cmd_check(a.song))
 
 
 if __name__ == "__main__":

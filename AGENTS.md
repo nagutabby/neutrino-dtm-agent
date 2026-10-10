@@ -24,13 +24,21 @@
 - **ジャンルはユーザーに聞く**(推測しない)。聞いたら `genre-research` で特徴を調べ(`docs/genres/<id>.md`、無ければ Web 検索で定義案を作る)、内容をユーザーに見せて確認する。
 - `scripts/genre_apply.py <song> <genre-id> --length-seconds N --run-mode step|auto` でトラック計画・曲の長さ・音源を曲に反映する。ジャンルが使わないトラックの spec は作らない(例: Phonk は 808 ベースとカウベル旋律、Lo-fi はエレピ中心)。標準外のトラックは `10-fx` のように 10 以降の番号で足す。
 - **曲の長さは必ず聞く**(秒の目安)。小節数は `テンポ × 秒` から換算して `01-structure` に入れる。ジャンルの標準尺から外れる場合は一言伝える。
-- **SoundFont が足りないときは作業を中断する**: `genre_apply.py` と `uv run scripts/soundfont.py check <song>` が終了コード 3 で「どんな SoundFont が必要か」を表示する。その内容をそのままユーザーに伝え、**用意してもらうまで次へ進まない**(代わりに探して取得しない・コミットしない)。用意できたと言われたら `soundfont.py check` を再実行して続きから再開する。音源の登録簿は `config/soundfonts.yaml`、使える音色は `soundfont.py presets <id>`。
+- **音色はシンセでゼロから合成する**(サンプル・SoundFont は使わない)。トラックは `params.patch`(`config/patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決め、実体は `synth/synthdefs.scd`(SuperCollider)。一覧は `uv run scripts/patches.py list`、引数は `patches.py show <id>`、曲の検査は `patches.py check <song>`(不正は終了コード 2。直してから進む)。足りない音色は `synthdefs.scd` と `patches.yaml` に足してよい(ユーザーに一言伝える)。仕組みは `docs/synthesis.md`。
+
+## サウンドチェック(音楽制作の前に全トラックの音を作る)
+
+**音楽制作(構成・和声・MIDI 生成など)は、トラック計画にある全トラックの音を SuperCollider で合成し、ユーザーが確認してから始める。**
+1. `genre_apply.py` と `patches.py check` が通ったら、`uv run scripts/patch_audition.py <song>` で全トラックの試奏 wav を `projects/<song>/audition/NN_<track>.wav` に作る(固定の短いフレーズ。曲の中身ではない)。ボーカルは対象外。
+2. 各トラックの音色(パッチ・主な引数が音にどう効くか)を数値付きで短く解説し、`! scripts/play.sh <path>` の再生コマンドを全トラック分並べる。
+3. `step`: `AskUserQuestion`(このまま進む / 音色を変える)で確認。変えるなら spec の `patch` / `patch_params` を更新し、`patch_audition.py --force` で作り直す。`auto`: 全トラック分を作って一覧を提示するが、止まらずそのまま制作へ進む(気になる点は最後にまとめて聞く)。
+4. 全トラック分の試奏が揃うまで `01-structure` 以降の spec 立案・MIDI 生成を始めない。トラックを後から足したときも、その分の試奏を先に作る。
 
 ## 進め方(`run_mode`)
 
 最初に必ず聞く: **ステップごとに進めるか(`step`)、すべて作り切るか(`auto`)**。`00-concept` の `run_mode` に記録する。
 - `step`: 1トラックごとに提示・技術解説し、「次へ / 修正 / やり直し / 自分で直す」を `AskUserQuestion` で確認してから次のトラックへ。
-- `auto`: 全 spec の立案・生成・検証・累積ミックスまで止まらず進める。最後にトラックごとの技術解説と聴きどころをまとめて提示し、気になる点を聞く。SoundFont 不足・検証エラーなど続行できない場合だけ中断して報告する。
+- `auto`: 全 spec の立案・生成・検証・累積ミックスまで止まらず進める。最後にトラックごとの技術解説と聴きどころをまとめて提示し、気になる点を聞く。パッチ検査エラー・合成失敗など続行できない場合だけ中断して報告する。
 - いつでも切り替え可(ユーザーが言えば `run_mode` を更新)。承認の記録や承認スクリプトはない。
 
 詳細: `docs/spec-driven.md`、雛形: `docs/templates/spec/`(枠のみ)、選択肢カタログ: `docs/spec-options.md`(spec-propose 専用)。状態確認: `uv run scripts/spec_status.py <song>` / `uv run scripts/spec_check.py <song>`。
@@ -58,7 +66,7 @@
 
 ## 初心者モードの振る舞い(`MODE=beginner` 既定)
 
-1. 最初の応答で、次の5問を順に聞く(`coach-start`): ①**参考にする曲の YouTube リンク**(複数可) ②**ジャンル** ③**曲の長さ** ④歌あり/インスト(`vocal`。インストなら歌詞・ボーカルは作らない) ⑤**進め方**(ステップごと / すべて作り切る = `run_mode`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。ジャンル確定後に `genre-research` → `genre_apply.py` → SoundFont 確認(不足なら中断)へ進む。
+1. 最初の応答で、次の5問を順に聞く(`coach-start`): ①**参考にする曲の YouTube リンク**(複数可) ②**ジャンル** ③**曲の長さ** ④歌あり/インスト(`vocal`。インストなら歌詞・ボーカルは作らない) ⑤**進め方**(ステップごと / すべて作り切る = `run_mode`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。ジャンル確定後に `genre-research` → `genre_apply.py` → パッチ検査へ進む。
 2. 実行前に「これから何をして、何が出力されるか」を1行で伝える。
 3. 結果報告は「できたこと / 聴きどころ / 次の選択肢」の3点。
 4. 専門用語は初出時に括弧で一言説明。同じ説明は繰り返さず `docs/glossary.md` を案内。
@@ -69,14 +77,14 @@
 
 ## パイプライン
 
-`MIDI → MusicXML → label → wav`(NEUTRINO は MusicXML のみ入力、歌声のみ合成)。伴奏トラックは MIDI を FluidSynth で試聴用に wav 化し、ffmpeg で重ねる。全中間ファイルを `projects/<song>/` に保持する。
+`MIDI → MusicXML → label → wav`(NEUTRINO は MusicXML のみ入力、歌声のみ合成)。伴奏トラックは MIDI を SuperCollider(NRT)でゼロから合成して wav 化し、ffmpeg で重ねる。全中間ファイルを `projects/<song>/` に保持する。
 
 - NEUTRINO 本体は `NEUTRINO_DIR`(既定 `~/NEUTRINO`)。**読み取り専用で、書き込まない**。出力は常に `projects/<song>/output/`。
 - 詳細: `docs/neutrino-cli.md`、`docs/midi-musicxml-rules.md`、`docs/workflow.md`。
 
 ## 試聴(CLI)
 
-- 音を聴くのは `scripts/play.sh`(音声は `mpv`、MIDI は `fluidsynth`)。操作: スペース=一時停止、←→=5秒移動、q=終了。
+- 音を聴くのは `scripts/play.sh`(音声は `mpv`。MIDI は SuperCollider で一時合成してから再生)。操作: スペース=一時停止、←→=5秒移動、q=終了。
 - `scripts/play.sh <path> [--start 秒] [--loop]`(`projects/` 配下のみ。`--dry-run` で確認)、`scripts/play.sh --list <song>` で聴けるファイルを一覧。
 - エージェントは **再生コマンドを提示する**(ユーザーが `!` を付けて実行する)。ユーザーが「再生して」と頼んだときだけ、`run_in_background` で実行し、長時間フォアグラウンドで止めない。聴いた感想を必ず聞く(`coach-review`)。
 - 聴きどころは「何秒付近の何」を `--start` 付きコマンドで示す。A/B 比較は2本のコマンドを並べて提示する。
@@ -86,7 +94,7 @@
 
 - 歌声パートは**単旋律・和音なし**、1音符1音節、歌詞必須、休符で息継ぎ、極端な音域を避ける。
 - `step` では、ユーザーの答えなしに次トラックへ進まない。どちらのモードでも技術解説なしで提示しない。1ステップに足すトラックは1本まで。
-- ジャンル・曲の長さ・進め方を聞かずに spec を作り始めない。SoundFont が足りないまま生成・レンダリングしない。
+- ジャンル・曲の長さ・進め方を聞かずに spec を作り始めない。`patches.py check` が通らないまま生成・レンダリングしない。
 - 参考曲(`reference/`)は抽象的な特徴(テンポ・キー・コード機能・盛り上がり等)の言語化にのみ使う。旋律・歌詞・リズムの複製を提案しない。取得物をコミットしない(`docs/reference-analysis.md`)。
 - NEUTRINO の出力音声・中間データ(label/f0/melspec)を、他の AI/機械学習ツール(音声変換・学習・解析モデル等)に渡さない。解析は MIDI/MusicXML のみ(`docs/licensing.md`)。
 - 既存ファイルの上書きは確認してから。スクリプトは `--dry-run` で先に確認する。
@@ -98,7 +106,7 @@
 ## コマンド(`.claude/commands/`)
 
 `/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → MIDI 書き起こし → 雰囲気分析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
-`/new-song [曲名]`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → SoundFont 確認(不足なら中断) → concept 確定まで進める開始コマンド。
+`/new-song [曲名]`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → パッチ検査 → サウンドチェック(全トラック試奏) → concept 確定まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)
 
@@ -107,4 +115,4 @@
 ## 開発メモ
 
 - Python は `uv`。`uv sync` → `uv run pytest` → `uv run ruff check .`。シェルは `shellcheck scripts/*.sh`。
-- 外部ツール: `mpv`(音声の試聴)、`fluidsynth`(MIDI の試聴・wav 化)、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。
+- 外部ツール: `mpv`(音声の試聴)、`SuperCollider`(sclang。MIDI からの音の合成・試聴)、`ffmpeg`(ミックス)、MuseScore 4 CLI(MIDI→MusicXML)。`scripts/setup.sh` で存在確認。

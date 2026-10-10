@@ -1,0 +1,99 @@
+# シンセ音色(パッチ)の登録簿。トラック spec は params.patch に ID を書き、必要なら params.patch_params で上書きする。
+# 実体は synth/synthdefs.scd の SynthDef(SuperCollider)。params のキー=SynthDef の引数名で、値=既定。
+# spec から指定できるのはここに載っている引数だけ(未知の名前は patches.py check がエラーにする)。
+# 共通: amp=音量(0〜1)、pan=定位(-1〜1)。ベロシティは amp に掛かる(MIDI の 0〜127 → 0〜1)。
+# kind: melodic = ノートごとに音程を変えて鳴らす / drums = ノート番号で打楽器を切り替える。
+# mono: true = 音が重なる/連続するとき同じ音を保ち音程だけ滑らせる(808 のグライド)。
+defaults: {drums: kit_acoustic, bass: bass_saw, chords: epiano, melody: lead_square, pad: pad_saw, piano: epiano, counter: pluck, perc: kit_808, fx: riser}
+
+patches:
+  sub808:
+    name: 808 ベース
+    kind: melodic
+    synthdef: sub808
+    mono: true
+    desc: 低いサイン波+歪み。ロングトーンとグライド向き(Phonk・トラップ)
+    params: {amp: 0.5, pan: 0, glide: 0.06, pitch_drop: 2.0, pitch_time: 0.04, decay: 1.2, drive: 3.0, rel: 0.15}
+  bass_saw:
+    name: ノコギリベース
+    kind: melodic
+    synthdef: bass_saw
+    mono: true
+    desc: ノコギリ波+サブ、カットオフが閉じる。ポップ・ロックのベース
+    params: {amp: 0.5, pan: 0, cutoff: 900, env_amt: 1500, res: 0.3, sub: 0.5, atk: 0.005, decay: 0.25, sus: 0.7, rel: 0.12}
+  pad_saw:
+    name: ノコギリパッド
+    kind: melodic
+    synthdef: pad_saw
+    desc: デチューンしたノコギリ波4本。ゆっくり立ち上がる持続音
+    params: {amp: 0.3, pan: 0, detune: 0.012, cutoff: 1800, res: 0.2, atk: 0.6, decay: 0.5, sus: 0.8, rel: 1.2}
+  epiano:
+    name: FM エレピ
+    kind: melodic
+    synthdef: epiano
+    desc: 2オペレーター FM のエレクトリックピアノ。Lo-fi・ポップのコード
+    params: {amp: 0.4, pan: 0, ratio: 1.0, index: 1.6, index_decay: 0.6, tine: 0.25, decay: 1.8, rel: 0.3}
+  lead_square:
+    name: パルスリード
+    kind: melodic
+    synthdef: lead_square
+    mono: true
+    desc: パルス波+ローパス+ビブラート。歌メロ・リード
+    params: {amp: 0.3, pan: 0, width: 0.5, cutoff: 3500, res: 0.2, vib_rate: 5.5, vib_depth: 0.006, vib_delay: 0.25, atk: 0.01, decay: 0.2, sus: 0.8, rel: 0.2}
+  pluck:
+    name: 撥弦
+    kind: melodic
+    synthdef: pluck
+    desc: Karplus-Strong の弦。ギター/ハープ風の短い音
+    params: {amp: 0.4, pan: 0, decay: 3.0, coef: 0.4, rel: 0.15}
+  bell:
+    name: ベル
+    kind: melodic
+    synthdef: bell
+    desc: 非整数倍 FM の金属的な音。カウベル旋律・ベルのフレーズ
+    params: {amp: 0.35, pan: 0, ratio: 1.4, index: 3.0, decay: 0.9, rel: 0.1}
+  riser:
+    name: ライザー
+    kind: melodic
+    synthdef: riser
+    uses_dur: true
+    desc: ノイズが低→高へ上がる盛り上げ効果。ノートの長さ分かけて上昇
+    params: {amp: 0.3, pan: 0, f_start: 300, f_end: 8000, res: 0.3, rel: 0.05}
+  impact:
+    name: インパクト
+    kind: melodic
+    synthdef: impact
+    oneshot: true
+    desc: 低音の落下+ノイズの破裂。ドロップ直前の一撃
+    params: {amp: 0.6, pan: 0, boom: 45, decay: 2.2, noise: 0.5}
+
+  kit_acoustic:
+    name: アコースティック風キット
+    kind: drums
+    desc: 合成のキック・スネア・ハット等。GM ドラム番号(36 キック / 38 スネア / 42 ハット …)で鳴らす
+    pieces:
+      kick:  {notes: [35, 36], synthdef: kick, params: {amp: 0.8, tune: 52, start: 160, sweep: 0.035, decay: 0.4, click: 0.3, drive: 1.3}}
+      snare: {notes: [38, 40], synthdef: snare, params: {amp: 0.6, tune: 190, tone: 0.5, snap: 0.8, decay: 0.2, noise_hp: 1500}}
+      clap:  {notes: [39], synthdef: clap, params: {amp: 0.5, tune: 1200, decay: 0.25, spread: 0.012}}
+      rim:   {notes: [37], synthdef: rim, params: {amp: 0.4, tune: 1700, decay: 0.03}}
+      hat_closed: {notes: [42, 44], synthdef: hat, params: {amp: 0.3, tune: 7000, decay: 0.05, tone: 0.4}}
+      hat_open:   {notes: [46], synthdef: hat, params: {amp: 0.3, tune: 7000, decay: 0.35, tone: 0.4}}
+      tom_low:  {notes: [41, 43, 45], synthdef: tom, params: {amp: 0.6, tune: 100, sweep: 0.06, decay: 0.35}}
+      tom_high: {notes: [47, 48, 50], synthdef: tom, params: {amp: 0.6, tune: 160, sweep: 0.06, decay: 0.3}}
+      crash: {notes: [49, 51, 52, 55, 57], synthdef: crash, params: {amp: 0.3, tune: 5000, decay: 1.8}}
+      cowbell: {notes: [56], synthdef: cowbell, params: {amp: 0.4, tune: 540, ratio: 1.48, decay: 0.35, bp: 2400}}
+  kit_808:
+    name: 808 キット
+    kind: drums
+    desc: 低く長いキック、短いスネア、細かいハット、カウベル。Phonk・トラップ向け
+    pieces:
+      kick:  {notes: [35, 36], synthdef: kick, params: {amp: 0.9, tune: 42, start: 140, sweep: 0.05, decay: 0.8, click: 0.2, drive: 2.0}}
+      snare: {notes: [38, 40], synthdef: snare, params: {amp: 0.6, tune: 200, tone: 0.4, snap: 1.0, decay: 0.18, noise_hp: 2000}}
+      clap:  {notes: [39], synthdef: clap, params: {amp: 0.55, tune: 1100, decay: 0.3, spread: 0.014}}
+      rim:   {notes: [37], synthdef: rim, params: {amp: 0.4, tune: 1700, decay: 0.03}}
+      hat_closed: {notes: [42, 44], synthdef: hat, params: {amp: 0.25, tune: 8500, decay: 0.03, tone: 0.2}}
+      hat_open:   {notes: [46], synthdef: hat, params: {amp: 0.25, tune: 8500, decay: 0.25, tone: 0.2}}
+      tom_low:  {notes: [41, 43, 45], synthdef: tom, params: {amp: 0.6, tune: 90, sweep: 0.08, decay: 0.5}}
+      tom_high: {notes: [47, 48, 50], synthdef: tom, params: {amp: 0.6, tune: 140, sweep: 0.08, decay: 0.4}}
+      crash: {notes: [49, 51, 52, 55, 57], synthdef: crash, params: {amp: 0.25, tune: 6000, decay: 1.5}}
+      cowbell: {notes: [56], synthdef: cowbell, params: {amp: 0.45, tune: 560, ratio: 1.48, decay: 0.4, bp: 2600}}

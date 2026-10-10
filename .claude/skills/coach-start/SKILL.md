@@ -11,6 +11,6 @@ description: 新しい曲を始めるとき。参考曲・ジャンル・曲の�
    5. **進め方**: ステップごとに進める(`step`: 1トラックごとに聴いて確認) / すべて作り切る(`auto`: 最後にまとめて提示)。
 2. 曲名を決め、`scripts/new_song.sh <song>` を実行(先に `--dry-run` で確認)。
 3. 集めた URL ごとに `/reference` の手順(`scripts/reference_run.sh <song> <url>`、先に `--dry-run`)で分析する。1 より前に質問1だけ済ませて 3 を実行し、2 以降の質問に分析結果を活かしてよい。
-4. **`genre-research` スキル**でジャンルを調べ、`genre_apply.py` で反映する(長さ・`run_mode` を渡す)。**SoundFont 不足なら中断**してユーザーに必要な内容を伝える。
+4. **`genre-research` スキル**でジャンルを調べ、`genre_apply.py` で反映する(長さ・`run_mode` を渡す)。パッチ検査(`patches.py check`)でエラーがあれば直す。続けて**サウンドチェック**(`patch_audition.py <song>` で全トラックの試奏を作り、音色を確認)を済ませてから制作に入る。
 5. 回答と分析結果(複数あれば共通点・違いを整理)を `spec/00-concept.md` に反映(`vocal: true|false`・`run_mode`・`params.genre/target_seconds/tracks` を必ず記入。インスト曲は歌詞・ボーカル前提の説明を出さない)。内容を見せてから `uv run scripts/decide.py <song> 00-concept` で ready にする。
 6. `uv run scripts/spec_status.py <song>` で次に決める要素を案内する。

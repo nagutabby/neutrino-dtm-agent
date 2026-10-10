@@ -178,17 +178,6 @@ def concept_tracks(specs: dict[str, tuple[dict, str]]) -> list[dict]:
     return [x for x in t if isinstance(x, dict)] if isinstance(t, list) else []
 
 
-def soundfont_id_of(specs: dict[str, tuple[dict, str]], key: str) -> str:
-    """そのトラック spec が使う SoundFont ID。spec の params.soundfont > concept のトラック計画 > gm。"""
-    sf = ((specs.get(key, ({}, ""))[0].get("params") or {}).get("soundfont"))
-    if sf:
-        return str(sf)
-    for t in concept_tracks(specs):
-        if t.get("spec") == key and t.get("soundfont"):
-            return str(t["soundfont"])
-    return "gm"
-
-
 def track_files(song: str, track: str) -> list[Path]:
     d = require_project(song) / "tracks"
     return sorted(d.glob(f"*_{track}_v*.mid")) if d.is_dir() else []
