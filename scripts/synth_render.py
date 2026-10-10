@@ -189,7 +189,7 @@ var events = [
 {events_src}
 ];
 var score = List.new;
-var opts = ServerOptions.new.sampleRate_({SAMPLE_RATE}).numOutputBusChannels_(2).numInputBusChannels_(0);
+var opts = ServerOptions.new.sampleRate_({SAMPLE_RATE}).numOutputBusChannels_(2).numInputBusChannels_(0).memSize_(131072);
 defs.do {{ |d| byName[d.name.asSymbol] = d }};
 [{used_src}].do {{ |n| score.add([0.0, ['/d_recv', byName[n].asBytes]]) }};
 {bufs_src}
