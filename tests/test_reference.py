@@ -57,3 +57,70 @@ def test_diatonic_fit_prefers_major_when_tonic_chord_is_major():
 def test_ambiguous_third_matches_either_quality():
     assert ra.diatonic_fit([(0, "5")], 0, "長調") == 1.0
     assert ra.diatonic_fit([(0, "5")], 9, "短調") == 1.0
+
+
+def test_to_midi_builds_pinned_muscriptor_cmd(song):
+    import reference_to_midi as r2m
+
+    cmd = r2m.build_cmd("a.wav", "o.mid", "large")
+    assert cmd[:4] == ["uvx", "--from", r2m.MUSCRIPTOR, "muscriptor"]
+    assert "==" in r2m.MUSCRIPTOR and cmd[-2:] == ["--model", "large"]
+
+
+def test_to_midi_runs_and_refuses_overwrite(song, monkeypatch):
+    import subprocess
+    import sys
+
+    import reference_to_midi as r2m
+
+    d = song / "reference" / "abc"
+    d.mkdir(parents=True)
+    (d / "audio.wav").write_bytes(b"")
+    calls = []
+
+    def fake_run(cmd, check=False):
+        calls.append(cmd)
+        (d / "transcription.mid").write_bytes(b"MThd")
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(r2m.subprocess, "run", fake_run)
+    monkeypatch.setattr(r2m.shutil, "which", lambda _: "/usr/bin/uvx")
+    monkeypatch.setattr(sys, "argv", ["reference_to_midi.py", "demo", "abc"])
+    r2m.main()
+    assert len(calls) == 1
+    with pytest.raises(SystemExit, match="既に存在"):
+        r2m.main()
+
+
+def test_to_midi_reports_auth_hint_on_failure(song, monkeypatch):
+    import subprocess
+    import sys
+
+    import reference_to_midi as r2m
+
+    d = song / "reference" / "abc"
+    d.mkdir(parents=True)
+    (d / "audio.wav").write_bytes(b"")
+    monkeypatch.setattr(r2m.subprocess, "run", lambda cmd, check=False: subprocess.CompletedProcess(cmd, 1))
+    monkeypatch.setattr(r2m.shutil, "which", lambda _: "/usr/bin/uvx")
+    monkeypatch.setattr(sys, "argv", ["reference_to_midi.py", "demo", "abc"])
+    with pytest.raises(SystemExit, match="hf auth login"):
+        r2m.main()
+
+
+def test_summarize_midi_groups_by_instrument(tmp_path):
+    import mido
+
+    m = mido.MidiFile(ticks_per_beat=480)
+    t = mido.MidiTrack()
+    m.tracks.append(t)
+    t.append(mido.Message("program_change", program=33, channel=0, time=0))
+    for p in (36, 40, 43):
+        t.append(mido.Message("note_on", note=p, velocity=80, channel=0, time=10))
+        t.append(mido.Message("note_off", note=p, velocity=0, channel=0, time=10))
+    t.append(mido.Message("note_on", note=36, velocity=90, channel=9, time=10))
+    p = tmp_path / "x.mid"
+    m.save(p)
+    out = ra.summarize_midi(p, 10.0)
+    assert set(out) == {"ベース", "ドラム"}
+    assert out["ドラム"]["register"] is None and out["ベース"]["notes"] == 3

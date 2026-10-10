@@ -9,12 +9,18 @@
 | 段階 | スクリプト | 出力(`projects/<song>/reference/<video-id>/`) |
 |---|---|---|
 | 取得 | `reference_fetch.sh` | `audio.wav`、`source.json`(タイトル等) |
-| 音源分離 | `reference_separate.py`(Demucs htdemucs) | `stems/{drums,bass,other,vocals}.wav` |
-| 書き起こし | `reference_to_midi.py`(Basic Pitch / ONNX) | `transcription_{bass,other,vocals}.mid`(分離なしなら `transcription.mid`) |
+| 音源分離 | `reference_separate.py`(Demucs htdemucs) | `stems/{drums,bass,other,vocals}.wav`(コード・キー・リズムの推定用) |
+| 書き起こし | `reference_to_midi.py`(**MuScriptor**、多楽器対応) | `transcription.mid`(楽器ごとのトラック+ドラム) |
 | 分析 | `reference_analyze.py`(librosa) | `analysis.json`、`analysis.md` |
 
 音源分離は初回にモデル(約80MB)を取得する。CPU で曲の長さの0.5〜1倍ほどかかる。省く場合は `REF_SEPARATE=0`。
 必要なもの: `brew install yt-dlp ffmpeg`。Python 依存は `uv sync --group reference`(`uv run --group reference` で自動)。
+
+### MuScriptor の準備(初回のみ。認証はユーザー自身が実行する)
+1. Hugging Face にログインし、https://huggingface.co/MuScriptor/muscriptor-medium でライセンス(**CC BY-NC 4.0、非商用**)に同意(自動承認)。large を使うなら large も別に同意。
+2. `uvx hf auth login`(トークンは `~/.cache/huggingface/` に保存され、リポジトリには入らない。値をファイルやログに書かない)。
+
+MuScriptor は `uvx --from muscriptor==0.3.0` で版を固定して実行し、プロジェクトの Python 環境とは分離される。初回は重みを取得する。medium で CPU の場合、42秒の曲に約2分かかった(曲の長さの3倍程度)。`--model small|medium|large` で選べる。
 
 ## 分析する特徴
 テンポ / キー(長調・短調)/ 小節ごとのコード(ローマ数字=機能で表示。短調は平行長調基準)/ 盛り上がりの形(8分割の音量)/ 音の明るさ / 刻みの細かさ / 書き起こし MIDI の音域・密度。
@@ -30,7 +36,20 @@
 | キー | C 長調 | A 短調(平行調。ローマ数字の基準は同じ) |
 
 分離ありのコード推定は、**根音をベースのパート、長調/短調を和音パート(other)の3度**から決める。ベースの倍音(5倍音=長3度)に惹かれて A を A(長)と誤る問題を避けるため。
-ベースの MIDI 書き起こしは分離しても低域で不安定(音が抜ける)。しきい値を下げると増えるのは多くがノイズで、採用していない。**MIDI は傾向把握用、コードの根拠は音声のクロマ**と考える。実際の楽曲(実楽器・歌入り・転調)での精度は未検証。
+(Basic Pitch での検証)ベースの MIDI 書き起こしは分離しても低域で不安定(音が抜ける)。しきい値を下げると増えるのは多くがノイズで、採用していない。**MIDI は傾向把握用、コードの根拠は音声のクロマ**と考える。実際の楽曲(実楽器・歌入り・転調)での精度は未検証。
+
+## 書き起こしモデルの比較(MuScriptor を採用した根拠)
+同じ合成音源(正解 MIDI あり)で、音符単位の F1(開始 ±50ms、音高一致、オクターブ無視、ドラム除外)を比べた。
+
+| 方式 | 適合率 | 再現率 | F1 |
+|---|---|---|---|
+| Basic Pitch(分離なし) | 0.75 | 0.33 | 0.46 |
+| Basic Pitch + Demucs 分離 | 0.76 | 0.61 | 0.68 |
+| **MuScriptor medium**(分離なし) | **0.91** | 0.58 | **0.71** |
+
+- パート別に正解の音を拾えた割合は、メロディ 99%(Basic Pitch 分離あり 96%)、ベース 25%(同 30%)、和音 25%(同 38%)、ドラム打点 42%(Basic Pitch は非対応)。
+- 全体の F1 は同程度で、**余計な音が少なく、ドラムと楽器名の推定が得られる**点で MuScriptor に置き換えた。ベース・和音の取りこぼしは残るので、コードの根拠は MIDI でなく音声のクロマ(上記)に置く。
+- 楽器名の推定は不正確なことがある(メロディをギターと判定した例)。検証は合成音源1曲のみ。実曲での精度は未検証。
 
 ## 実際の曲での試行(Kevin MacLeod "Sunshine"、CC BY、3分26秒)
 取得→分離→書き起こし→分析まで約35秒で通った。結果と、そこで見つけた弱点への対処:

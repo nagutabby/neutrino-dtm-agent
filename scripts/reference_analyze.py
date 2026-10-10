@@ -219,21 +219,42 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
         res["part_balance"] = {
             k: round(float(librosa.feature.rms(y=v)[0].mean()) / tot, 2) for k, v in parts.items()
         }
-    import midi_tools
-
-    regs = {}
-    for f in sorted(ref.glob("transcription*.mid")):
-        m = midi_tools.load(str(f))
-        if m.notes:
-            ps = sorted(x.pitch for x in m.notes)
-            part = f.stem.removeprefix("transcription_") if f.stem != "transcription" else "mix"
-            regs[part] = {
-                "register": [ps[int(len(ps) * 0.05)], ps[int(len(ps) * 0.95)]],
-                "notes_per_sec": round(len(m.notes) / dur, 2) if dur else 0,
-            }
-    if regs:
-        res["transcribed"] = regs
+    tr = ref / "transcription.mid"
+    if tr.exists():
+        res["transcribed"] = summarize_midi(tr, dur)
     return res
+
+
+GM_FAMILIES = [
+    "ピアノ", "音程打楽器", "オルガン", "ギター", "ベース", "弦", "アンサンブル", "ブラス",
+    "リード", "パイプ", "シンセリード", "シンセパッド", "シンセ効果", "民族楽器", "打楽器", "効果音",
+]  # fmt: skip
+
+
+def summarize_midi(path: Path, dur: float) -> dict:
+    """楽器(チャンネル)ごとに音域・密度を要約する。音符列は出さない。"""
+    import mido
+
+    mid = mido.MidiFile(path)
+    prog: dict[int, int] = {}
+    pitches: dict[int, list[int]] = {}
+    for track in mid.tracks:
+        for msg in track:
+            if msg.type == "program_change":
+                prog[msg.channel] = msg.program
+            elif msg.type == "note_on" and msg.velocity > 0:
+                pitches.setdefault(msg.channel, []).append(msg.note)
+    out: dict[str, dict] = {}
+    for ch, ps in sorted(pitches.items()):
+        ps.sort()
+        label = "ドラム" if ch == 9 else GM_FAMILIES[prog.get(ch, 0) // 8]
+        key = label if label not in out else f"{label}#{ch}"
+        out[key] = {
+            "notes": len(ps),
+            "notes_per_sec": round(len(ps) / dur, 2) if dur else 0,
+            "register": None if ch == 9 else [ps[int(len(ps) * 0.05)], ps[int(len(ps) * 0.95)]],
+        }
+    return out
 
 
 def mood_hypotheses(r: dict) -> list[str]:
@@ -294,6 +315,9 @@ def to_markdown(r: dict, src: dict) -> str:
         from common import midi_to_note
 
         for part, t in r["transcribed"].items():
+            if t["register"] is None:
+                lines.append(f"- 書き起こし MIDI [{part}] の打点: {t['notes_per_sec']} 回/秒(目安)")
+                continue
             lo, hi = t["register"]
             lines.append(
                 f"- 書き起こし MIDI [{part}] の音域(5〜95%): {midi_to_note(lo)}〜{midi_to_note(hi)}、{t['notes_per_sec']} 音/秒(目安)"

@@ -12,6 +12,11 @@ echo "■ 環境チェック"
 if command -v uv >/dev/null; then ok "uv"; else ng "uv(brew install uv)"; fi
 if command -v ffmpeg >/dev/null; then ok "ffmpeg"; else ng "ffmpeg(brew install ffmpeg)"; fi
 if command -v fluidsynth >/dev/null; then ok "fluidsynth"; else ng "fluidsynth(brew install fluid-synth)"; fi
+if command -v uvx >/dev/null && [ -f "$HOME/.cache/huggingface/token" ]; then
+  ok "参考曲の書き起こし(uvx + Hugging Face ログイン済み。MuScriptor のライセンス同意は別途必要)"
+else
+  echo "  - 参考曲の書き起こしを使うなら: MuScriptor のライセンスに同意し、ご自身で uvx hf auth login(docs/reference-analysis.md)"
+fi
 if command -v yt-dlp >/dev/null; then ok "yt-dlp(参考曲の分析用)"; else echo "  - yt-dlp 未導入(参考曲の分析を使うなら brew install yt-dlp)"; fi
 if [ -x "$NEUTRINO_DIR/bin/neutrino" ] && [ -x "$NEUTRINO_DIR/bin/musicXMLtoLabel" ]; then
   ok "NEUTRINO: $NEUTRINO_DIR"

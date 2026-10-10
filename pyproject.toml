@@ -12,11 +12,8 @@ dependencies = [
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
 reference = [
-    "basic-pitch>=0.4.0",
     "demucs>=4.1.0",
     "librosa>=0.11.0",
-    "onnxruntime>=1.31.0",
-    "setuptools",
     "soundfile>=0.14.0",
 ]
 
@@ -31,8 +28,3 @@ ignore = ["E501"]  # 日本語メッセージは幅が広いため行長は検�
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["scripts"]
-
-[tool.uv]
-# basic-pitch は macOS で tensorflow-macos を要求するが cp312 wheel が無い。ONNX 推論を使うので除外する。
-# resampy>=0.4.3 は pkg_resources 非依存(basic-pitch は <0.4.3 と制限しているが、最新 setuptools で動くよう上書き)。
-override-dependencies = ["resampy>=0.4.3", "tensorflow-macos; sys_platform == 'never'", "tensorflow; sys_platform == 'never'"]

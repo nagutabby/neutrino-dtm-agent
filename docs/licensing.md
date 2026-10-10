@@ -20,3 +20,8 @@
 
 ## クレジット
 公開する曲には、使用したモデル名と「NEUTRINO(STUDIO NEUTRINO)」を各モデルの規約に沿って表記する。
+
+## 参考曲の分析で使うモデル
+- **MuScriptor**(音声→MIDI): コードは MIT、**重みは CC BY-NC 4.0(非商用)**。商用利用はしない。Hugging Face でのライセンス同意とログインはユーザー自身が行う。
+- **Demucs**(音源分離): MIT。
+- 取得した音声・分離音・書き起こし MIDI は私的な分析用で、コミット・公開しない(`docs/reference-analysis.md`)。
