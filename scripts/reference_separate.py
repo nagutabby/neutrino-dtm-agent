@@ -5,7 +5,7 @@
   projects/<song>/reference/<id>/audio.wav → stems/{drums,bass,other,vocals,guitar,piano}.wav
   (--model htdemucs なら guitar / piano を含まない 4 パート。ピアノ・ギターは other に入る)
 6 パート版は guitar / piano を分けられるが、開発元が実験的としており、特に piano は精度が低い。
-MIDI 書き起こしの前段。混ざった音のままより、パートごとの方が書き起こし・コード推定が安定する。
+混ざった音のままより、パートごとに分けた方がコード・キー・リズムの推定が安定する(MIDI への書き起こしはしない)。
 初回はモデル(約 80MB)をダウンロードする。CPU で曲の長さの 0.5〜1 倍程度の時間がかかる。
 分離した音声は私的な分析用で、コミット・公開しない。
 """

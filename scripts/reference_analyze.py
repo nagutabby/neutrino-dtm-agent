@@ -2,7 +2,7 @@
 """参考曲から「雰囲気」を抽象的な特徴(テンポ・キー・コード進行・音域・密度・明るさ・盛り上がり)に要約する。
 
 使い方: reference_analyze.py <song> <video-id>
-  入力: reference/<id>/audio.wav(+ transcription.mid があれば音域・密度に利用)
+  入力: reference/<id>/audio.wav(+ 音源分離済みの stems/)
   出力: reference/<id>/analysis.json と analysis.md(AI がユーザーと曲のイメージを話すための材料)
 旋律・歌詞・音符列は出力しない。推定値は目安であり、spec を決めるのはユーザー。
 """
@@ -220,42 +220,7 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
         res["part_balance"] = {
             k: round(float(librosa.feature.rms(y=v)[0].mean()) / tot, 2) for k, v in parts.items()
         }
-    tr = ref / "transcription.mid"
-    if tr.exists():
-        res["transcribed"] = summarize_midi(tr, dur)
     return res
-
-
-GM_FAMILIES = [
-    "ピアノ", "音程打楽器", "オルガン", "ギター", "ベース", "弦", "アンサンブル", "ブラス",
-    "リード", "パイプ", "シンセリード", "シンセパッド", "シンセ効果", "民族楽器", "打楽器", "効果音",
-]  # fmt: skip
-
-
-def summarize_midi(path: Path, dur: float) -> dict:
-    """楽器(チャンネル)ごとに音域・密度を要約する。音符列は出さない。"""
-    import mido
-
-    mid = mido.MidiFile(path)
-    prog: dict[int, int] = {}
-    pitches: dict[int, list[int]] = {}
-    for track in mid.tracks:
-        for msg in track:
-            if msg.type == "program_change":
-                prog[msg.channel] = msg.program
-            elif msg.type == "note_on" and msg.velocity > 0:
-                pitches.setdefault(msg.channel, []).append(msg.note)
-    out: dict[str, dict] = {}
-    for ch, ps in sorted(pitches.items()):
-        ps.sort()
-        label = "ドラム" if ch == 9 else GM_FAMILIES[prog.get(ch, 0) // 8]
-        key = label if label not in out else f"{label}#{ch}"
-        out[key] = {
-            "notes": len(ps),
-            "notes_per_sec": round(len(ps) / dur, 2) if dur else 0,
-            "register": None if ch == 9 else [ps[int(len(ps) * 0.05)], ps[int(len(ps) * 0.95)]],
-        }
-    return out
 
 
 def mood_hypotheses(r: dict) -> list[str]:
@@ -292,7 +257,7 @@ def mood_hypotheses(r: dict) -> list[str]:
 def to_markdown(r: dict, src: dict) -> str:
     lines = [f"# 参考曲の分析: {src.get('title', '(不明)')}", ""]
     lines += [
-        f"- 出典: {src.get('webpage_url', '(不明)')}(私的な分析用。音声・MIDI は保存のみで公開しない)",
+        f"- 出典: {src.get('webpage_url', '(不明)')}(私的な分析用。音声は保存のみで公開しない)",
         "",
     ]
     lines += [
@@ -319,17 +284,6 @@ def to_markdown(r: dict, src: dict) -> str:
             "- パートの音量バランス(分離後): "
             + "、".join(f"{names[k]} {v:.0%}" for k, v in r["part_balance"].items())
         )
-    if r.get("transcribed"):
-        from common import midi_to_note
-
-        for part, t in r["transcribed"].items():
-            if t["register"] is None:
-                lines.append(f"- 書き起こし MIDI [{part}] の打点: {t['notes_per_sec']} 回/秒(目安)")
-                continue
-            lo, hi = t["register"]
-            lines.append(
-                f"- 書き起こし MIDI [{part}] の音域(5〜95%): {midi_to_note(lo)}〜{midi_to_note(hi)}、{t['notes_per_sec']} 音/秒(目安)"
-            )
     lines.append(
         f"- 解析方法: {'音源分離あり(コード・キーは伴奏、リズムはドラムから推定)' if r['separated'] else '音源分離なし(ミックス全体から推定。精度は低め)'}"
     )

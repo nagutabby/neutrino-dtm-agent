@@ -24,7 +24,7 @@
 - **ジャンルはユーザーに聞く**(推測しない)。聞いたら `genre-research` で特徴を調べ(`docs/genres/<id>.md`、無ければ Web 検索で定義案を作る)、内容をユーザーに見せて確認する。
 - `scripts/genre_apply.py <song> <genre-id> --length-seconds N --run-mode step|auto` でトラック計画・曲の長さ・音源を曲に反映する。ジャンルが使わないトラックの spec は作らない(例: Phonk は 808 ベースとカウベル旋律、Lo-fi はエレピ中心)。標準外のトラックは `10-fx` のように 10 以降の番号で足す。
 - **曲の長さは必ず聞く**(秒の目安)。小節数は `テンポ × 秒` から換算して `01-structure` に入れる。ジャンルの標準尺から外れる場合は一言伝える。
-- **音色はシンセでゼロから合成する**(サンプル・SoundFont は使わない)。トラックは `params.patch`(`config/patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決め、実体は `synth/synthdefs.scd`(SuperCollider)。一覧は `uv run scripts/patches.py list`、引数は `patches.py show <id>`、曲の検査は `patches.py check <song>`(不正は終了コード 2。直してから進む)。足りない音色は `synthdefs.scd` と `patches.yaml` に足してよい(ユーザーに一言伝える)。仕組みは `docs/synthesis.md`。
+- **伴奏の音は必ず SuperCollider で作る**(厳守)。サンプル・SoundFont・外部の音源・収集した MIDI の再生音・他ツールの合成音を最終音に使わない。足りない音色は `synthdefs.scd` に SynthDef を足して作る(歌声のみ NEUTRINO)。音色はシンセでゼロから合成する。トラックは `params.patch`(`config/patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決め、実体は `synth/synthdefs.scd`(SuperCollider)。一覧は `uv run scripts/patches.py list`、引数は `patches.py show <id>`、曲の検査は `patches.py check <song>`(不正は終了コード 2。直してから進む)。足りない音色は `synthdefs.scd` と `patches.yaml` に足してよい(ユーザーに一言伝える)。仕組みは `docs/synthesis.md`。
 
 ## サウンドチェック(音楽制作の前に全トラックの音を作る)
 
@@ -92,6 +92,7 @@
 
 ## 制約(厳守)
 
+- 伴奏・効果音を含め、曲に使う音は SuperCollider(`synth/synthdefs.scd`)で合成する。別の方法で音を作る・サンプルを貼る提案や実行をしない。
 - 歌声パートは**単旋律・和音なし**、1音符1音節、歌詞必須、休符で息継ぎ、極端な音域を避ける。
 - `step` では、ユーザーの答えなしに次トラックへ進まない。どちらのモードでも技術解説なしで提示しない。1ステップに足すトラックは1本まで。
 - ジャンル・曲の長さ・進め方を聞かずに spec を作り始めない。`patches.py check` が通らないまま生成・レンダリングしない。
@@ -105,7 +106,7 @@
 
 ## コマンド(`.claude/commands/`)
 
-`/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → MIDI 書き起こし → 雰囲気分析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
+`/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → 雰囲気分析(音声から。MIDI への書き起こしはしない)。ジャンル・雰囲気が決まったら Web 検索で類似曲の MIDI を取得して解析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
 `/new-song [曲名]`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → パッチ検査 → サウンドチェック(全トラック試奏) → concept 確定まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)

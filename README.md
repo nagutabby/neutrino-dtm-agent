@@ -35,4 +35,4 @@ NEUTRINO は STUDIO NEUTRINO の製品です。本リポジトリは非公式の
 `scripts/play.sh <path>`(`projects/` 配下の wav / mp3 / MIDI。`--list <曲名>` で一覧)。mpv が必要: `brew install mpv`。
 
 ## 参考曲から雰囲気をつかむ
-`/reference <曲名> <YouTube URL>` で参考曲を分析し、テンポ・キー・コード機能などから曲のイメージを言葉にします。詳細と注意は `docs/reference-analysis.md`。
+`/reference <曲名> <YouTube URL>` で参考曲を音源分離して分析し(MIDI への書き起こしはしません)、ジャンルと雰囲気から Web 検索で類似曲の MIDI を集めて解析し、テンポ・キー・コード機能などから曲のイメージを言葉にします。詳細と注意は `docs/reference-analysis.md`。

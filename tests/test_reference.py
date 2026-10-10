@@ -59,57 +59,29 @@ def test_ambiguous_third_matches_either_quality():
     assert ra.diatonic_fit([(0, "5")], 9, "短調") == 1.0
 
 
-def test_to_midi_builds_pinned_muscriptor_cmd(song):
-    import reference_to_midi as r2m
+def _chord_midi(path, ts=(4, 4)):
+    from conftest import make_midi
 
-    cmd = r2m.build_cmd("a.wav", "o.mid", "large")
-    assert cmd[:4] == ["uvx", "--from", r2m.MUSCRIPTOR, "muscriptor"]
-    assert "==" in r2m.MUSCRIPTOR and cmd[-2:] == ["--model", "large"]
-
-
-def test_to_midi_runs_and_refuses_overwrite(song, monkeypatch):
-    import subprocess
-    import sys
-
-    import reference_to_midi as r2m
-
-    d = song / "reference" / "abc"
-    d.mkdir(parents=True)
-    (d / "audio.wav").write_bytes(b"")
-    calls = []
-
-    def fake_run(cmd, check=False):
-        calls.append(cmd)
-        (d / "transcription.mid").write_bytes(b"MThd")
-        return subprocess.CompletedProcess(cmd, 0)
-
-    monkeypatch.setattr(r2m.subprocess, "run", fake_run)
-    monkeypatch.setattr(r2m.shutil, "which", lambda _: "/usr/bin/uvx")
-    monkeypatch.setattr(sys, "argv", ["reference_to_midi.py", "demo", "abc"])
-    r2m.main()
-    assert len(calls) == 1
-    with pytest.raises(SystemExit, match="既に存在"):
-        r2m.main()
+    notes = []
+    for bar, (root, third) in enumerate([(48, 4), (55, 4), (57, 3), (53, 4)] * 2):
+        for p in (root, root + third, root + 7):
+            notes.append((bar * 4, 4, p, 80))
+    make_midi(path, notes, bpm=100, ts=ts)
 
 
-def test_to_midi_reports_auth_hint_on_failure(song, monkeypatch):
-    import subprocess
-    import sys
+def test_midi_analyze_finds_chord_functions(tmp_path):
+    import reference_midi_analyze as rma
 
-    import reference_to_midi as r2m
-
-    d = song / "reference" / "abc"
-    d.mkdir(parents=True)
-    (d / "audio.wav").write_bytes(b"")
-    monkeypatch.setattr(r2m.subprocess, "run", lambda cmd, check=False: subprocess.CompletedProcess(cmd, 1))
-    monkeypatch.setattr(r2m.shutil, "which", lambda _: "/usr/bin/uvx")
-    monkeypatch.setattr(sys, "argv", ["reference_to_midi.py", "demo", "abc"])
-    with pytest.raises(SystemExit, match="hf auth login"):
-        r2m.main()
+    p = tmp_path / "x.mid"
+    _chord_midi(p)
+    r = rma.analyze_file(p)
+    assert r["key"] == "C 長調" and r["tempo_bpm"] == 100
+    assert r["loop_4bars"][0] == ["I", "V", "vi", "IV"] and r["loop_4bars"][1] == 2
 
 
-def test_summarize_midi_groups_by_instrument(tmp_path):
+def test_midi_analyze_groups_parts(tmp_path):
     import mido
+    import reference_midi_analyze as rma
 
     m = mido.MidiFile(ticks_per_beat=480)
     t = mido.MidiTrack()
@@ -119,11 +91,44 @@ def test_summarize_midi_groups_by_instrument(tmp_path):
         t.append(mido.Message("note_on", note=p, velocity=80, channel=0, time=10))
         t.append(mido.Message("note_off", note=p, velocity=0, channel=0, time=10))
     t.append(mido.Message("note_on", note=36, velocity=90, channel=9, time=10))
+    t.append(mido.Message("note_off", note=36, velocity=0, channel=9, time=10))
     p = tmp_path / "x.mid"
     m.save(p)
-    out = ra.summarize_midi(p, 10.0)
-    assert set(out) == {"ベース", "ドラム"}
-    assert out["ドラム"]["register"] is None and out["ベース"]["notes"] == 3
+    assert set(rma.analyze_file(p)["parts"]) == {"ベース", "ドラム"}
+
+
+def test_midi_fetch_rejects_bad_urls(song):
+    import reference_midi_fetch as rmf
+
+    for bad in ("http://a.com/x.mid", "https://a.com/page.html", "ftp://a.com/x.mid"):
+        with pytest.raises(SystemExit):
+            rmf.check_url(bad)
+    assert rmf.safe_name("https://a.com/dir/My%20Song!.MID") == "My_Song.mid"
+
+
+def test_midi_fetch_saves_and_refuses_overwrite(song, monkeypatch):
+    import sys
+
+    import reference_midi_fetch as rmf
+
+    monkeypatch.setattr(rmf, "download", lambda url: b"MThd")
+    url = "https://a.com/x.mid"
+    monkeypatch.setattr(sys, "argv", ["f", "demo", url, "--title", "T"])
+    rmf.main()
+    d = song / "reference" / "midi"
+    assert (d / "x.mid").read_bytes() == b"MThd" and "\"title\": \"T\"" in (d / "sources.jsonl").read_text()
+    with pytest.raises(SystemExit, match="既に存在"):
+        rmf.main()
+
+
+def test_midi_fetch_download_rejects_non_midi(monkeypatch):
+    import io
+
+    import reference_midi_fetch as rmf
+
+    monkeypatch.setattr(rmf.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(b"<html>"))
+    with pytest.raises(SystemExit, match="MIDI ファイルではありません"):
+        rmf.download("https://a.com/x.mid")
 
 
 def test_separate_default_is_six_stem_model():

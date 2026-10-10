@@ -1,6 +1,6 @@
 # シンセ合成(SuperCollider)
 
-伴奏の音はサンプルを使わず、波形から作る(減算合成・FM・物理モデル・ノイズ)。MIDI は「いつ・どの高さで・どの強さで」、パッチは「どんな音色で」。
+**曲に使う音は必ず SuperCollider で作る**(サンプル・SoundFont・外部音源は使わない。足りない音色は SynthDef を足す。歌声のみ NEUTRINO)。伴奏の音は波形から作る(減算合成・FM・物理モデル・ノイズ)。MIDI は「いつ・どの高さで・どの強さで」、パッチは「どんな音色で」。
 
 ## 流れ
 `tracks/NN_<track>_vN.mid` → `scripts/synth_render.py`(spec の `patch` / `patch_params` を解決)→ `.scd`(ボイス列)→ `sclang` の `Score.recordNRT`(非リアルタイム)→ `stems/NN_<track>_vN.wav`

@@ -10,7 +10,7 @@ description: 新しい曲を始めるとき。参考曲・ジャンル・曲の�
    4. **歌あり / インスト**(後から変えると作り直しになるため早めに決める)。
    5. **進め方**: ステップごとに進める(`step`: 1トラックごとに聴いて確認) / すべて作り切る(`auto`: 最後にまとめて提示)。
 2. 曲名を決め、`scripts/new_song.sh <song>` を実行(先に `--dry-run` で確認)。
-3. 集めた URL ごとに `/reference` の手順(`scripts/reference_run.sh <song> <url>`、先に `--dry-run`)で分析する。1 より前に質問1だけ済ませて 3 を実行し、2 以降の質問に分析結果を活かしてよい。
+3. 集めた URL ごとに `/reference` の手順(`scripts/reference_run.sh <song> <url>`、先に `--dry-run`)で分析する(音源分離と音声の分析まで。MIDI への書き起こしはしない)。1 より前に質問1だけ済ませて 3 を実行し、2 以降の質問に分析結果を活かしてよい。ジャンルが決まったら、`/reference` の手順で**類似曲の MIDI を Web 検索で集めて解析**する(ジャンル+参考曲の分析から推定した雰囲気が検索語)。
 4. **`genre-research` スキル**でジャンルを調べ、`genre_apply.py` で反映する(長さ・`run_mode` を渡す)。パッチ検査(`patches.py check`)でエラーがあれば直す。続けて**サウンドチェック**(`patch_audition.py <song>` で全トラックの試奏を作り、音色を確認)を済ませてから制作に入る。
 5. 回答と分析結果(複数あれば共通点・違いを整理)を `spec/00-concept.md` に反映(`vocal: true|false`・`run_mode`・`params.genre/target_seconds/tracks` を必ず記入。インスト曲は歌詞・ボーカル前提の説明を出さない)。内容を見せてから `uv run scripts/decide.py <song> 00-concept` で ready にする。
 6. `uv run scripts/spec_status.py <song>` で次に決める要素を案内する。

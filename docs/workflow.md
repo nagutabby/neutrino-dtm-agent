@@ -26,4 +26,4 @@
 
 スクリプト側のガード: ファイル名引数(トラック名・basename・モデル名)に `/` や `..` は使えない。`mix_tracks.sh` の step は数字のみ。`register_track.py` は別の曲の `projects/<other>/` 配下の MIDI を拒否する。
 
-参考曲がある場合: spec 立案の前に `/reference` で雰囲気を分析し、`spec/00-concept.md` に反映する(`docs/reference-analysis.md`)。
+参考曲がある場合: spec 立案の前に `/reference` で雰囲気を分析し(音源分離 → 音声の分析 → ジャンル確定後に類似曲 MIDI を Web 検索して解析)、`spec/00-concept.md` に反映する(`docs/reference-analysis.md`)。

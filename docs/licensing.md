@@ -21,10 +21,10 @@
 ## クレジット
 公開する曲には、使用したモデル名と「NEUTRINO(STUDIO NEUTRINO)」を各モデルの規約に沿って表記する。
 
-## 参考曲の分析で使うモデル
-- **MuScriptor**(音声→MIDI): コードは MIT、**重みは CC BY-NC 4.0(非商用)**。商用利用はしない。Hugging Face でのライセンス同意とログインはユーザー自身が行う。
-- **Demucs**(音源分離): MIT。
-- 取得した音声・分離音・書き起こし MIDI は私的な分析用で、コミット・公開しない(`docs/reference-analysis.md`)。
+## 参考曲の分析で使うもの
+- **Demucs**(音源分離): MIT。音声から MIDI への書き起こし(AI モデル)は使わない。
+- **Web で見つけた類似曲の MIDI**: 採譜者・サイトごとに利用条件が異なる。直リンク1ファイルずつ私的な分析用に取得し、利用条件が分かれば `sources.jsonl` に記録する。コミット・公開・再配布しない。旋律・リズムは複製しない。
+- 取得した音声・分離音・MIDI は私的な分析用で、コミット・公開しない(`docs/reference-analysis.md`)。
 
 ## シンセ音源
 - 伴奏はサンプル・SoundFont を使わず、SuperCollider(`synth/synthdefs.scd`)でゼロから合成する。第三者の音源ライセンスは発生しない。SuperCollider 自体は GPL(本リポジトリは同梱せず、ユーザーが導入する)。
