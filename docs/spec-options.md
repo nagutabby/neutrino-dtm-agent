@@ -3,6 +3,7 @@
 最大3案を聴感の効果つきで提示する。ユーザー案を優先。
 
 ## 00-concept
+- vocal: 歌あり(true)/ インスト(false)を最初に決める。false なら 07-lyrics・08-vocal は対象外、09-mix の依存から vocal が自動で外れる
 - 明るい: 長調・速め・短い音で弾む / 切ない: 短調・遅め・長い音 / 力強い: 低音強め・バックビート強調
 
 ## 01-structure
@@ -38,6 +39,6 @@
 - style_shift: 表情(声の高さの傾向) / transpose: 半音単位でずらす
 
 ## 09-mix
-- 主役は vocal(歌なしは melody)、伴奏は少し下げる。歌なしの曲はその曲の spec だけ depends_on から 08-vocal を外してよい
+- 主役は vocal(歌なしは melody)、伴奏は少し下げる。インスト曲は depends_on から vocal が自動で外れる
 - 低音は中央、コード楽器は少し左右 / loudness 目安 -14 LUFS
 - approved 後に mix_tracks.sh が levels_db(dB)・pan(-1左〜+1右)・loudness_lufs を反映

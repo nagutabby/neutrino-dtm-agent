@@ -15,6 +15,7 @@ import shutil
 
 from common import (
     SPECS,
+    active_keys,
     deps_of,
     load_specs,
     reject_foreign_project,
@@ -35,6 +36,8 @@ def main() -> None:
     proj = require_project(a.song)
     reject_foreign_project(a.midi, a.song)
     specs = load_specs(a.song)
+    if a.spec not in active_keys(specs):
+        raise SystemExit(f"インスト曲(00-concept の vocal: false)では {a.spec} は使いません")
     track = SPECS[a.spec][2]
     needed = [a.spec, *deps_of(specs, a.spec)]
     bad = [k for k in needed if specs.get(k, ({}, ""))[0].get("status") != "approved"]

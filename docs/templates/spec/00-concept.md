@@ -2,6 +2,7 @@
 status: draft  # draft | approved | needs-revision
 version: 1
 depends_on: []
+vocal: true  # true=歌あり | false=インスト(最初に決める)
 mode: beginner  # beginner | standard
 level: 1  # 1〜3(docs/learning-path.md)
 decisions: []  # {date, version, note}

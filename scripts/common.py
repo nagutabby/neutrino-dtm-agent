@@ -106,12 +106,28 @@ def load_specs(song: str) -> dict[str, tuple[dict, str]]:
     return out
 
 
+VOCAL_ONLY = ("07-lyrics", "08-vocal")
+
+
+def vocal_enabled(specs: dict[str, tuple[dict, str]]) -> bool:
+    """00-concept の vocal が false ならインスト曲(歌詞・ボーカルの spec は対象外)。"""
+    return specs.get("00-concept", ({}, ""))[0].get("vocal", True) is not False
+
+
+def active_keys(specs: dict[str, tuple[dict, str]]) -> list[str]:
+    on = vocal_enabled(specs)
+    return [k for k in SPECS if on or k not in VOCAL_ONLY]
+
+
 def deps_of(specs: dict[str, tuple[dict, str]], key: str) -> list[str]:
-    """spec の依存元。その spec の frontmatter に depends_on があれば曲ごとの上書きとして優先する。"""
+    """spec の依存元。その spec の frontmatter に depends_on があれば曲ごとの上書きとして優先する。
+    インスト曲(vocal: false)では歌詞・ボーカルを依存から除く。"""
     declared = specs.get(key, ({}, ""))[0].get("depends_on")
     if isinstance(declared, list) and all(isinstance(d, str) and d in SPECS for d in declared):
-        return declared
-    return SPECS[key][1]
+        deps = declared
+    else:
+        deps = SPECS[key][1]
+    return deps if vocal_enabled(specs) else [d for d in deps if d not in VOCAL_ONLY]
 
 
 def track_files(song: str, track: str) -> list[Path]:

@@ -100,3 +100,19 @@ def test_depends_on_override_per_song(song):
     assert "09-mix" in spec_status.next_candidates(specs)
     _, warns = spec_check.check("demo")
     assert any("09-mix" in w and "上書き" in w for w in warns)
+
+
+def test_instrumental_skips_vocal_specs(song):
+    import common
+    import spec_check
+    import spec_status
+
+    d = common.require_project("demo")
+    set_meta(d, "00-concept", vocal=False)
+    approve_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
+    specs = common.load_specs("demo")
+    assert common.active_keys(specs) == [k for k in common.SPECS if k not in common.VOCAL_ONLY]
+    assert "08-vocal" not in common.deps_of(specs, "09-mix")
+    assert spec_status.next_candidates(specs) == ["09-mix"]
+    errors, warns = spec_check.check("demo")
+    assert not errors and not any("08-vocal" in w or "07-lyrics" in w or "09-mix" in w for w in warns)

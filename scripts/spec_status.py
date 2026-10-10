@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import argparse
 
-from common import SPECS, deps_of, load_specs
+from common import SPECS, active_keys, deps_of, load_specs, vocal_enabled
 
 
 def next_candidates(specs: dict) -> list[str]:
     out = []
-    for key in SPECS:
+    for key in active_keys(specs):
         deps = deps_of(specs, key)
         st = specs.get(key, ({"status": "draft"}, ""))[0].get("status", "draft")
         if st == "approved":
@@ -25,8 +25,9 @@ def main() -> None:
     ap.add_argument("song")
     args = ap.parse_args()
     specs = load_specs(args.song)
-    print(f"■ {args.song} の spec 状態")
-    for key, (label, _deps, _) in SPECS.items():
+    print(f"■ {args.song} の spec 状態" + ("" if vocal_enabled(specs) else "(インスト: 歌詞・ボーカルなし)"))
+    for key in active_keys(specs):
+        label = SPECS[key][0]
         meta = specs.get(key, ({}, ""))[0]
         st = meta.get("status", "(ファイルなし)")
         mark = {"approved": "✔", "needs-revision": "↻"}.get(st, "・")

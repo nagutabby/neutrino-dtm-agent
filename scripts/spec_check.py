@@ -15,6 +15,7 @@ import midi_tools
 from common import (
     SPECS,
     STATUSES,
+    active_keys,
     deps_of,
     load_specs,
     midi_to_note,
@@ -32,7 +33,9 @@ def check(song: str) -> tuple[list[str], list[str]]:
     require_project(song)
     specs = load_specs(song)
 
-    for key, (_, std_deps, _) in SPECS.items():
+    active = active_keys(specs)
+    for key in active:
+        std_deps = [d for d in SPECS[key][1] if d in active]
         if key not in specs:
             warns.append(f"{key}.md がありません(new_song.sh で雛形を展開できます)")
             continue
@@ -50,7 +53,8 @@ def check(song: str) -> tuple[list[str], list[str]]:
                 errors.append(f"{key} は approved ですが、依存元が未承認です: {', '.join(not_ok)}")
 
     struct = specs.get("01-structure", ({}, ""))[0].get("params", {}) or {}
-    for key, (_label, _deps, track) in SPECS.items():
+    for key in active:
+        track = SPECS[key][2]
         if not track:
             continue
         files = track_files(song, track)
