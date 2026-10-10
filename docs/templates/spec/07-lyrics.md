@@ -1,5 +1,5 @@
 ---
-status: draft  # draft | approved | needs-revision
+status: draft  # draft | ready | needs-revision
 version: 1
 depends_on: [01-structure, 06-melody]
 syllables_per_phrase: []  # 各フレーズの音節数(メロディの音符数と一致させる)

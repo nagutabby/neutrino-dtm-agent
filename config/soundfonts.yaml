@@ -1,0 +1,16 @@
+# SoundFont 登録簿。トラックは論理 ID(gm / phonk …)で音源を指定し、実ファイルはここの規則で探す。
+# 実ファイル(.sf2/.sf3)はコミットしない(権利・容量)。置き場所は .env の SOUNDFONT_DIR(既定: リポジトリ直下の soundfonts/)。
+# 解決順: 環境変数 SF_<ID大文字、- は _> のパス → SOUNDFONT_DIR 配下でファイル名が keywords をすべて含む/keywords_any のどれかを含むもの。
+# ジャンル調査で登録簿にない音源が要るときは、ここに ID・name・need を足す(need は日本語で「どんな音源か」)。
+# どのプリセット(program 番号)が使えるかは `uv run scripts/soundfont.py presets <id>` で調べる。
+soundfonts:
+  gm:
+    name: 汎用 General MIDI SoundFont
+    need: GM 準拠(128音色+GM ドラムキット)の SoundFont。ピアノ・エレピ・ギター・ベース・ストリングス・シンセなどがひと通り入った汎用品
+    keywords_any: ["generaluser", "fluidr3", "gm"]
+  phonk:
+    name: Phonk 専用 SoundFont
+    need: |
+      Phonk 向けに作られた SoundFont。808 系の低音ベース、Phonk 向けドラム(キック・スネア・ハイハット)、
+      カウベル、ダークなリード/コード系の音色がプリセットとして入ったもの。GM の汎用音色では代用できない
+    keywords: ["phonk"]

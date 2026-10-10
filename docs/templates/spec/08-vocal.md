@@ -1,5 +1,5 @@
 ---
-status: draft  # draft | approved | needs-revision
+status: draft  # draft | ready | needs-revision
 version: 1
 depends_on: [06-melody, 07-lyrics]
 params:

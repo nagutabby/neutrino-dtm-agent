@@ -6,9 +6,9 @@
 ## 最上位原則: スペック駆動
 
 1. **spec が唯一の正**。曲の構成要素は `projects/<song>/spec/` に1要素1ファイルで少しずつ決める。
-2. **approved になった要素だけ**を AI が生成する。`draft` / `needs-revision` の要素は生成しない。
-3. 依存元が approved になるまで下流は作らない(例: harmony 未承認なら bass 不可)。`depends_on` を守る。
-4. ユーザーが「気になる」と伝えたら、**生成物を直接直さず、まず spec の差分案を示す** → 承認 → version+1 → 該当トラックと下流のみ再生成。
+2. **ready(決定済み)になった要素だけ**を AI が生成する。`draft` / `needs-revision` の要素は生成しない。ready にするのは `scripts/decide.py`(spec が埋まったことの記録であり、承認ゲートではない)。
+3. 依存元が ready になるまで下流は作らない(例: harmony が draft なら bass 不可)。`depends_on` を守る。
+4. ユーザーが「気になる」と伝えたら、**生成物を直接直さず、まず spec の差分案を示す** → ユーザーが了承 → version+1 → 該当トラックと下流のみ再生成。
 5. 再生成の範囲(stale になる要素)は実行前に一覧で示し、確認を取る。
 6. ユーザーが自分で MIDI を編集した場合のみ、取り込んで spec を逆更新する提案をする。
 
@@ -19,32 +19,46 @@
 - 新規 spec は `docs/templates/spec/` の見出しと説明文を丸ごと残さず、使う項目だけ残す。
 - spec を読むときは必要な要素だけ(対象と `depends_on`)。全 spec を毎回読み込まない。
 
+## ジャンル駆動(トラック構成・長さ・音源はジャンルで決まる)
+
+- **ジャンルはユーザーに聞く**(推測しない)。聞いたら `genre-research` で特徴を調べ(`docs/genres/<id>.md`、無ければ Web 検索で定義案を作る)、内容をユーザーに見せて確認する。
+- `scripts/genre_apply.py <song> <genre-id> --length-seconds N --run-mode step|auto` でトラック計画・曲の長さ・音源を曲に反映する。ジャンルが使わないトラックの spec は作らない(例: Phonk は 808 ベースとカウベル旋律、Lo-fi はエレピ中心)。標準外のトラックは `10-fx` のように 10 以降の番号で足す。
+- **曲の長さは必ず聞く**(秒の目安)。小節数は `テンポ × 秒` から換算して `01-structure` に入れる。ジャンルの標準尺から外れる場合は一言伝える。
+- **SoundFont が足りないときは作業を中断する**: `genre_apply.py` と `uv run scripts/soundfont.py check <song>` が終了コード 3 で「どんな SoundFont が必要か」を表示する。その内容をそのままユーザーに伝え、**用意してもらうまで次へ進まない**(代わりに探して取得しない・コミットしない)。用意できたと言われたら `soundfont.py check` を再実行して続きから再開する。音源の登録簿は `config/soundfonts.yaml`、使える音色は `soundfont.py presets <id>`。
+
+## 進め方(`run_mode`)
+
+最初に必ず聞く: **ステップごとに進めるか(`step`)、すべて作り切るか(`auto`)**。`00-concept` の `run_mode` に記録する。
+- `step`: 1トラックごとに提示・技術解説し、「次へ / 修正 / やり直し / 自分で直す」を `AskUserQuestion` で確認してから次のトラックへ。
+- `auto`: 全 spec の立案・生成・検証・累積ミックスまで止まらず進める。最後にトラックごとの技術解説と聴きどころをまとめて提示し、気になる点を聞く。SoundFont 不足・検証エラーなど続行できない場合だけ中断して報告する。
+- いつでも切り替え可(ユーザーが言えば `run_mode` を更新)。承認の記録や承認スクリプトはない。
+
 詳細: `docs/spec-driven.md`、雛形: `docs/templates/spec/`(枠のみ)、選択肢カタログ: `docs/spec-options.md`(spec-propose 専用)。状態確認: `uv run scripts/spec_status.py <song>` / `uv run scripts/spec_check.py <song>`。
 
 ## プロジェクト(曲)ごとのディレクトリ
 
-- **1曲 = 1ディレクトリ `projects/<song>/`**。spec・MIDI・stems・mix・musicxml・label・output・`notes.md`・`approved.json` はすべてその中に置く。曲をまたいでファイルを共有・上書きしない。
+- **1曲 = 1ディレクトリ `projects/<song>/`**。spec・MIDI・stems・mix・musicxml・label・output・`notes.md` はすべてその中に置く。曲をまたいでファイルを共有・上書きしない。
 - 新しい曲は必ず `scripts/new_song.sh <song>`(先に `--dry-run`)で作る。曲名は英数字・`_`・`-` のみ。既存曲は上書きしない。
 - 全スクリプトに `<song>` を明示して渡す。作業開始時に「いま扱う曲は `<song>`」と宣言し、曲が複数あって不明なら `AskUserQuestion` で確認する(推測しない)。
-- 曲を切り替えるときは、現在の曲の未承認の作業状況を一言で報告してから移る。
+- 曲を切り替えるときは、現在の曲の未完了(draft / needs-revision)の作業状況を一言で報告してから移る。
 - `projects/*/output|stems|mix` と音声はコミットしない(`.gitignore`)。spec・MIDI・`notes.md` は追跡対象。
 
 ## トラック別・段階的レイヤリング
 
-トラックは **1ステップ1本**。順序の既定: Drums → Bass → Chords → Melody → Vocal → 装飾 → ミックス確認(曲ごとに `brief`/concept で変更可)。
+トラックは **1ステップ1本**。トラックの種類と数は **ジャンルのトラック計画**(`00-concept.params.tracks`)で決まる。順序の既定: Drums → Bass → Chords → Melody → Vocal → 装飾(FX など) → ミックス確認(曲ごとに concept で変更可)。
 各ステップは必ずこの流れで進める:
 
 1. **予告**: 何を作るかを1行で伝える。
-2. **生成**: approved spec から。案は最大3。版は `v1, v2…` で保存し、旧版は消さない。
+2. **生成**: ready の spec から。案は最大3。版は `v1, v2…` で保存し、旧版は消さない。
 3. **検証**: バリデータを通す。エラーは「何が/なぜ/直し方」を日本語で伝える。黙って直さない。
 4. **提示**: トラック**単体**の試聴物と、Step 1〜N の**累積ミックス**の2本。パスと聴きどころ(何秒付近の何に注目)を示し、**そのまま貼れる再生コマンド**(`! scripts/play.sh <path> [--start 秒]`)を添える。
 5. **技術解説(必須)**: なぜそう聞こえるかを、**音楽理論(度数・コード機能・終止・声部連結・コードトーンなど)**と、音域・ベロシティ・ノート長・拍の位置・音色・パン・音量・StyleShift などの**数値付き**で説明する。累積ミックスでは前のトラックとのかみ合わせも説明する。理論は `docs/music-theory.md`、数値の辞書は `docs/technique-notes.md` を参照。理論用語は初出時に括弧で補い、一度に出すのは最大2つ。
-6. **承認ゲート**: `AskUserQuestion` で「採用 / 修正 / やり直し / 自分で直す」を確認する。**承認前は次のトラックに進まない・ミックスを確定しない**。
-7. **記録**: 承認内容と学んだ技術を `notes.md` に追記。承認は `scripts/approve.py` で記録する(ユーザーが承認すると発言した後にのみ実行)。
+6. **進行確認**(`run_mode: step` のみ): `AskUserQuestion` で「次へ / 修正 / やり直し / 自分で直す」を確認し、答えを受けてから次のトラックへ。`auto` では確認せず次へ進み、最後にまとめて提示する。
+7. **記録**: 学んだ技術と決定を `notes.md` に追記。承認の記録や承認用ファイルはない(生成物は版番号 `v1, v2…` で残り、ミックスは各トラックの最新版を使う。固定は `mix_tracks.sh <song> <step> track=N`)。
 
 ## 初心者モードの振る舞い(`MODE=beginner` 既定)
 
-1. 最初の応答で、**まずどの曲を参考にするかを聞き、YouTube の動画リンクを書いてもらう**(複数あれば複数)。続けて歌あり/インスト(`00-concept` の `vocal`。インストなら歌詞・ボーカルは作らない)、目的・使える時間。合計最大3問(`coach-start`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。
+1. 最初の応答で、次の5問を順に聞く(`coach-start`): ①**参考にする曲の YouTube リンク**(複数可) ②**ジャンル** ③**曲の長さ** ④歌あり/インスト(`vocal`。インストなら歌詞・ボーカルは作らない) ⑤**進め方**(ステップごと / すべて作り切る = `run_mode`)。参考曲ごとに `/reference` で分析して `00-concept` に反映する。ジャンル確定後に `genre-research` → `genre_apply.py` → SoundFont 確認(不足なら中断)へ進む。
 2. 実行前に「これから何をして、何が出力されるか」を1行で伝える。
 3. 結果報告は「できたこと / 聴きどころ / 次の選択肢」の3点。
 4. 専門用語は初出時に括弧で一言説明。同じ説明は繰り返さず `docs/glossary.md` を案内。
@@ -71,7 +85,8 @@
 ## 制約(厳守)
 
 - 歌声パートは**単旋律・和音なし**、1音符1音節、歌詞必須、休符で息継ぎ、極端な音域を避ける。
-- 承認なしに次トラック生成・累積ミックス確定をしない。技術解説なしで提示しない。1ステップに足すトラックは1本まで。
+- `step` では、ユーザーの答えなしに次トラックへ進まない。どちらのモードでも技術解説なしで提示しない。1ステップに足すトラックは1本まで。
+- ジャンル・曲の長さ・進め方を聞かずに spec を作り始めない。SoundFont が足りないまま生成・レンダリングしない。
 - 参考曲(`reference/`)は抽象的な特徴(テンポ・キー・コード機能・盛り上がり等)の言語化にのみ使う。旋律・歌詞・リズムの複製を提案しない。取得物をコミットしない(`docs/reference-analysis.md`)。
 - NEUTRINO の出力音声・中間データ(label/f0/melspec)を、他の AI/機械学習ツール(音声変換・学習・解析モデル等)に渡さない。解析は MIDI/MusicXML のみ(`docs/licensing.md`)。
 - 既存ファイルの上書きは確認してから。スクリプトは `--dry-run` で先に確認する。
@@ -83,11 +98,11 @@
 ## コマンド(`.claude/commands/`)
 
 `/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → MIDI 書き起こし → 雰囲気分析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
-`/new-song [曲名]`: 環境確認 → 3問ヒアリング → `projects/<song>/` 作成 → concept 承認 まで進める開始コマンド。
+`/new-song [曲名]`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → SoundFont 確認(不足なら中断) → concept 確定まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)
 
-`coach-start` / `coach-explain` / `coach-review` / `spec-propose` / `spec-revise` / `spec-regenerate` / `layer-track` / `explain-technique`
+`coach-start` / `genre-research` / `coach-explain` / `coach-review` / `spec-propose` / `spec-revise` / `spec-regenerate` / `layer-track` / `explain-technique`
 
 ## 開発メモ
 

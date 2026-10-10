@@ -2,7 +2,7 @@
 """spec と生成物の整合性を検査する(日本語で結果表示)。
 
 検査: frontmatter / 依存関係の充足 / stale(spec が生成物より新しい) /
-      未承認 spec のトラック / MIDI が spec のテンポ・拍子・小節数・音域に合っているか。
+      未決定(ready でない) spec のトラック / MIDI が spec のテンポ・拍子・小節数・音域に合っているか。
 終了コード: 0=エラーなし / 1=エラーあり
 """
 
@@ -13,7 +13,8 @@ import sys
 
 import midi_tools
 from common import (
-    SPECS,
+    READY,
+    REQUIRED_SPECS,
     STATUSES,
     active_keys,
     deps_of,
@@ -22,7 +23,9 @@ from common import (
     note_to_midi,
     require_project,
     sidecar,
+    standard_deps,
     track_files,
+    track_of,
     version_of,
 )
 
@@ -34,11 +37,11 @@ def check(song: str) -> tuple[list[str], list[str]]:
     specs = load_specs(song)
 
     active = active_keys(specs)
-    for key in active:
-        std_deps = [d for d in SPECS[key][1] if d in active]
+    for key in REQUIRED_SPECS:
         if key not in specs:
             warns.append(f"{key}.md がありません(new_song.sh で雛形を展開できます)")
-            continue
+    for key in active:
+        std_deps = [d for d in standard_deps(specs, key) if d in active]
         meta = specs[key][0]
         if meta.get("status") not in STATUSES:
             errors.append(f"{key}: status は {'/'.join(STATUSES)} のいずれかにしてください(現在: {meta.get('status')!r})")
@@ -47,14 +50,14 @@ def check(song: str) -> tuple[list[str], list[str]]:
         deps = deps_of(specs, key)
         if sorted(deps) != sorted(std_deps):
             warns.append(f"{key}: depends_on {deps} が標準の依存 {std_deps} と異なります(この曲だけの上書き)")
-        if meta.get("status") == "approved":
-            not_ok = [d for d in deps if specs.get(d, ({}, ""))[0].get("status") != "approved"]
+        if meta.get("status") == READY:
+            not_ok = [d for d in deps if specs.get(d, ({}, ""))[0].get("status") != READY]
             if not_ok:
-                errors.append(f"{key} は approved ですが、依存元が未承認です: {', '.join(not_ok)}")
+                errors.append(f"{key} は ready ですが、依存元が ready ではありません: {', '.join(not_ok)}")
 
     struct = specs.get("01-structure", ({}, ""))[0].get("params", {}) or {}
     for key in active:
-        track = SPECS[key][2]
+        track = track_of(specs, key)
         if not track:
             continue
         files = track_files(song, track)
@@ -62,8 +65,8 @@ def check(song: str) -> tuple[list[str], list[str]]:
             continue
         latest = files[-1]
         meta = specs.get(key, ({}, ""))[0]
-        if meta.get("status") != "approved":
-            errors.append(f"{latest.name}: 対応する spec {key} が approved ではありません(spec が先です)")
+        if meta.get("status") != READY:
+            errors.append(f"{latest.name}: 対応する spec {key} が ready ではありません(spec が先です)")
         side = sidecar(latest)
         if not side:
             warns.append(f"{latest.name}: spec_version の記録(.json)がありません。register_track.py で登録してください")

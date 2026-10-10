@@ -13,7 +13,22 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 PROJECTS = Path(os.environ.get("DTM_PROJECTS", ROOT / "projects"))
 
-# spec 要素: ファイル名 -> (表示名, 依存, トラック名 or None)
+
+def load_dotenv() -> None:
+    """リポジトリ直下の .env(KEY=VALUE)を環境変数の既定値として読む(シェル側は lib.sh が読む)。"""
+    f = ROOT / ".env"
+    if not f.is_file():
+        return
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), os.path.expandvars(v.strip().strip("\"'")))
+
+# 標準 spec 要素: ファイル名 -> (表示名, 依存, トラック名 or None)
+# ジャンルによってはトラック spec を足す/省く(例: 10-fx)。曲に実在する spec ファイルが対象で、
+# 標準にないキーは frontmatter の track / label / depends_on から読む(catalog 参照)。
 SPECS: dict[str, tuple[str, list[str], str | None]] = {
     "00-concept": ("コンセプト", [], None),
     "01-structure": ("曲構成(キー・テンポ・小節数)", ["00-concept"], None),
@@ -21,12 +36,16 @@ SPECS: dict[str, tuple[str, list[str], str | None]] = {
     "03-drums": ("ドラム", ["01-structure"], "drums"),
     "04-bass": ("ベース", ["01-structure", "02-harmony"], "bass"),
     "05-chords": ("コード楽器", ["01-structure", "02-harmony"], "chords"),
-    "06-melody": ("歌メロ", ["01-structure", "02-harmony"], "melody"),
+    "06-melody": ("歌メロ/リード", ["01-structure", "02-harmony"], "melody"),
     "07-lyrics": ("歌詞", ["01-structure", "06-melody"], None),
     "08-vocal": ("ボーカル合成設定", ["06-melody", "07-lyrics"], "vocal"),
-    "09-mix": ("ミックス", ["03-drums", "04-bass", "05-chords", "08-vocal"], None),
+    "09-mix": ("ミックス", [], None),  # 依存の既定は「曲にあるトラック spec すべて」(deps_of)
 }
-STATUSES = ("draft", "approved", "needs-revision")
+REQUIRED_SPECS = ("00-concept", "01-structure", "02-harmony", "09-mix")
+SPEC_KEY_RE = re.compile(r"\d{2}-[a-z0-9-]+")
+# draft=未決 / ready=決定済み(この spec から生成してよい) / needs-revision=見直し中
+STATUSES = ("draft", "ready", "needs-revision")
+READY = "ready"
 
 _NOTE = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
@@ -97,12 +116,12 @@ def write_spec(path: Path, meta: dict, body: str) -> None:
 
 
 def load_specs(song: str) -> dict[str, tuple[dict, str]]:
+    """曲の spec/ にある NN-name.md をすべて読む(キー順)。"""
     d = require_project(song) / "spec"
     out = {}
-    for key in SPECS:
-        p = d / f"{key}.md"
-        if p.exists():
-            out[key] = read_spec(p)
+    for p in sorted(d.glob("*.md")):
+        if SPEC_KEY_RE.fullmatch(p.stem):
+            out[p.stem] = read_spec(p)
     return out
 
 
@@ -116,18 +135,58 @@ def vocal_enabled(specs: dict[str, tuple[dict, str]]) -> bool:
 
 def active_keys(specs: dict[str, tuple[dict, str]]) -> list[str]:
     on = vocal_enabled(specs)
-    return [k for k in SPECS if on or k not in VOCAL_ONLY]
+    return [k for k in specs if on or k not in VOCAL_ONLY]
+
+
+def catalog_entry(specs: dict[str, tuple[dict, str]], key: str) -> tuple[str, str | None]:
+    """spec 1個の (表示名, トラック名 or None)。標準外のキーは frontmatter の label / track から。"""
+    if key in SPECS:
+        label, _, track = SPECS[key]
+        return label, track
+    meta = specs.get(key, ({}, ""))[0]
+    return str(meta.get("label") or key), str(meta.get("track") or key.split("-", 1)[1])
+
+
+def label_of(specs: dict[str, tuple[dict, str]], key: str) -> str:
+    return catalog_entry(specs, key)[0]
+
+
+def track_of(specs: dict[str, tuple[dict, str]], key: str) -> str | None:
+    return catalog_entry(specs, key)[1]
+
+
+def standard_deps(specs: dict[str, tuple[dict, str]], key: str) -> list[str]:
+    if key == "09-mix":
+        return [k for k in specs if k != key and track_of(specs, k)]
+    return list(SPECS[key][1]) if key in SPECS else ["01-structure", "02-harmony"]
 
 
 def deps_of(specs: dict[str, tuple[dict, str]], key: str) -> list[str]:
     """spec の依存元。その spec の frontmatter に depends_on があれば曲ごとの上書きとして優先する。
     インスト曲(vocal: false)では歌詞・ボーカルを依存から除く。"""
     declared = specs.get(key, ({}, ""))[0].get("depends_on")
-    if isinstance(declared, list) and all(isinstance(d, str) and d in SPECS for d in declared):
+    if isinstance(declared, list) and all(isinstance(d, str) and SPEC_KEY_RE.fullmatch(d) for d in declared):
         deps = declared
     else:
-        deps = SPECS[key][1]
+        deps = standard_deps(specs, key)
     return deps if vocal_enabled(specs) else [d for d in deps if d not in VOCAL_ONLY]
+
+
+def concept_tracks(specs: dict[str, tuple[dict, str]]) -> list[dict]:
+    """00-concept.params.tracks(ジャンルから決めたトラック計画)。"""
+    t = (specs.get("00-concept", ({}, ""))[0].get("params") or {}).get("tracks")
+    return [x for x in t if isinstance(x, dict)] if isinstance(t, list) else []
+
+
+def soundfont_id_of(specs: dict[str, tuple[dict, str]], key: str) -> str:
+    """そのトラック spec が使う SoundFont ID。spec の params.soundfont > concept のトラック計画 > gm。"""
+    sf = ((specs.get(key, ({}, ""))[0].get("params") or {}).get("soundfont"))
+    if sf:
+        return str(sf)
+    for t in concept_tracks(specs):
+        if t.get("spec") == key and t.get("soundfont"):
+            return str(t["soundfont"])
+    return "gm"
 
 
 def track_files(song: str, track: str) -> list[Path]:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 環境確認: uv / NEUTRINO / fluidsynth / ffmpeg / MuseScore / SoundFont
+# 環境確認: uv / NEUTRINO / fluidsynth / ffmpeg / MuseScore / SoundFont(gm と登録簿の各音源)
 set -u
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -31,10 +31,7 @@ if [ -n "${MUSESCORE_BIN:-}" ] && [ -x "$MUSESCORE_BIN" ]; then
 else
   ng "MuseScore 4 CLI(brew install --cask musescore 後、.env に MUSESCORE_BIN を設定)"
 fi
-if [ -n "${SOUNDFONT:-}" ] && [ -f "$SOUNDFONT" ]; then
-  ok "SoundFont: $SOUNDFONT"
-else
-  ng "SoundFont(.sf2)を用意して .env の SOUNDFONT に設定"
-fi
+echo "  SoundFont(曲ごとに必要なものは soundfont.py check <song> で確認。✘ は使う曲があるときだけ必要):"
+(cd "$ROOT" && uv run --quiet scripts/soundfont.py list 2>/dev/null | sed 's/^/   /') || echo "   (uv 未導入のため一覧を省略)"
 if [ "$MISSING" = 0 ]; then echo "すべて揃っています。"; else echo "不足があります。上の ✘ を解消してください。"; fi
 exit 0

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: ready
 version: 1
 depends_on: []
 mode: beginner

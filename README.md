@@ -12,7 +12,7 @@ AI が曲を作り切るのではなく、**スペック駆動**で「決める(
 ## セットアップ
 ```sh
 brew install uv ffmpeg fluid-synth      # MuseScore 4 は別途(brew install --cask musescore)
-cp .env.example .env                    # NEUTRINO_DIR / MUSESCORE_BIN / SOUNDFONT を設定
+cp .env.example .env                    # NEUTRINO_DIR / MUSESCORE_BIN を設定(SoundFont は soundfonts/ に置く)
 uv sync
 scripts/setup.sh                        # 不足の確認
 ```

@@ -1,6 +1,6 @@
 import json
 
-import approve  # noqa: F401  (import check)
+import decide  # noqa: F401  (import check)
 from conftest import make_midi
 
 
@@ -13,9 +13,9 @@ def set_meta(d, key, **kv):
     common.write_spec(p, meta, body)
 
 
-def approve_all(d, keys):
+def ready_all(d, keys):
     for k in keys:
-        set_meta(d, k, status="approved")
+        set_meta(d, k, status="ready")
 
 
 def test_templates_parse_and_check_clean(song):
@@ -25,15 +25,15 @@ def test_templates_parse_and_check_clean(song):
     assert errors == []
 
 
-def test_approved_with_unapproved_dep_is_error(song):
+def test_ready_with_unready_dep_is_error(song):
     import spec_check
 
-    set_meta(song, "04-bass", status="approved")
+    set_meta(song, "04-bass", status="ready")
     errors, _ = spec_check.check("demo")
-    assert any("依存元が未承認" in e for e in errors)
+    assert any("依存元が ready ではありません" in e for e in errors)
 
 
-def test_register_requires_approved(song, tmp_path, monkeypatch):
+def test_register_requires_ready(song, tmp_path, monkeypatch):
     import subprocess
     import sys
 
@@ -46,14 +46,14 @@ def test_register_requires_approved(song, tmp_path, monkeypatch):
         env={**__import__("os").environ, "DTM_PROJECTS": str(song.parent)},
         capture_output=True, text=True,
     )
-    assert r.returncode != 0 and "approved" in (r.stderr + r.stdout)
+    assert r.returncode != 0 and "ready" in (r.stderr + r.stdout)
 
 
 def test_stale_and_tempo_mismatch(song):
     import spec_check
 
     keys = ["00-concept", "01-structure", "02-harmony", "04-bass"]
-    approve_all(song, keys)
+    ready_all(song, keys)
     mid = song / "tracks" / "04_bass_v1.mid"
     make_midi(mid, [(0, 1, 36, 90), (4, 1, 40, 90)], bpm=100)
     mid.with_suffix(".json").write_text(json.dumps({"spec": "04-bass", "spec_versions": {"04-bass": 1, "01-structure": 1, "02-harmony": 1}}))
@@ -92,7 +92,7 @@ def test_depends_on_override_per_song(song):
     import spec_status
 
     d = common.require_project("demo")
-    approve_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
+    ready_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
     assert "09-mix" not in spec_status.next_candidates(common.load_specs("demo"))
     set_meta(d, "09-mix", depends_on=["03-drums", "04-bass", "05-chords", "06-melody"])
     specs = common.load_specs("demo")
@@ -109,10 +109,55 @@ def test_instrumental_skips_vocal_specs(song):
 
     d = common.require_project("demo")
     set_meta(d, "00-concept", vocal=False)
-    approve_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
+    ready_all(d, ["00-concept", "01-structure", "02-harmony", "03-drums", "04-bass", "05-chords", "06-melody"])
     specs = common.load_specs("demo")
     assert common.active_keys(specs) == [k for k in common.SPECS if k not in common.VOCAL_ONLY]
     assert "08-vocal" not in common.deps_of(specs, "09-mix")
     assert spec_status.next_candidates(specs) == ["09-mix"]
     errors, warns = spec_check.check("demo")
     assert not errors and not any("08-vocal" in w or "07-lyrics" in w or "09-mix" in w for w in warns)
+
+
+def test_genre_tracks_are_dynamic(song):
+    """標準外のトラック spec(10-fx)を足しても、catalog・mix の依存・stem 名に反映される。"""
+    import common
+    import spec_status
+
+    d = common.require_project("demo")
+    (d / "spec" / "10-fx.md").write_text(
+        "---\nstatus: draft\nversion: 1\nlabel: エフェクト\ntrack: fx\ndepends_on: [01-structure]\nparams:\n  soundfont: gm\n---\n# fx\n",
+        encoding="utf-8",
+    )
+    specs = common.load_specs("demo")
+    assert common.track_of(specs, "10-fx") == "fx" and common.label_of(specs, "10-fx") == "エフェクト"
+    assert "10-fx" in common.deps_of(specs, "09-mix")
+    ready_all(d, ["00-concept", "01-structure"])
+    assert "10-fx" in spec_status.next_candidates(common.load_specs("demo"))
+
+
+def test_removed_track_spec_is_not_required(song):
+    """ジャンルが使わないトラック(spec ファイルなし)は検査・依存の対象外。"""
+    import common
+    import spec_check
+
+    d = common.require_project("demo")
+    (d / "spec" / "05-chords.md").unlink()
+    specs = common.load_specs("demo")
+    assert "05-chords" not in common.deps_of(specs, "09-mix")
+    errors, warns = spec_check.check("demo")
+    assert not errors and not any("05-chords" in w for w in warns)
+
+
+def test_decide_requires_ready_deps(song, monkeypatch):
+    import sys
+
+    import pytest
+
+    monkeypatch.setattr(sys, "argv", ["decide.py", "demo", "02-harmony"])
+    with pytest.raises(SystemExit, match="依存元"):
+        decide.main()
+    ready_all(song, ["00-concept", "01-structure"])
+    decide.main()
+    import common
+
+    assert common.load_specs("demo")["02-harmony"][0]["status"] == "ready"
