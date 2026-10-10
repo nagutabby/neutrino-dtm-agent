@@ -124,3 +124,10 @@ def test_summarize_midi_groups_by_instrument(tmp_path):
     out = ra.summarize_midi(p, 10.0)
     assert set(out) == {"ベース", "ドラム"}
     assert out["ドラム"]["register"] is None and out["ベース"]["notes"] == 3
+
+
+def test_separate_default_is_six_stem_model():
+    import reference_separate as rs
+
+    assert rs.MODELS["htdemucs_6s"][-2:] == ("guitar", "piano")
+    assert rs.MODELS["htdemucs"] == ("drums", "bass", "other", "vocals")

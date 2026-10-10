@@ -94,19 +94,20 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
     y = _load(ref / "audio.wav")
     dur = len(y) / sr
     stems = ref / "stems"
-    parts = {
-        p: _load(stems / f"{p}.wav")
-        for p in ("drums", "bass", "other", "vocals")
-        if (stems / f"{p}.wav").exists()
-    }
+    ALL = ("drums", "bass", "other", "vocals", "guitar", "piano")
+    parts = {p: _load(stems / f"{p}.wav") for p in ALL if (stems / f"{p}.wav").exists()}
     separated = use_stems and {"bass", "other"} <= parts.keys()
-    # 分離できていれば、コード・キーは伴奏(bass+other)から、リズムは drums から推定する
+    # 分離できていれば、コード・キーは伴奏(bass + other + guitar + piano)から、リズムは drums から推定する
     n = min(len(v) for v in parts.values()) if separated else 0
-    y_harm = parts["bass"][:n] + parts["other"][:n] if separated else y
+    harm_names = [p for p in ("other", "guitar", "piano") if p in parts] if separated else []
+    y_chords = (
+        sum(parts[p][:n] for p in harm_names) if separated else y
+    )  # 和音を担う楽器(bass を除く)
+    y_harm = parts["bass"][:n] + y_chords if separated else y
     y_rhythm = parts["drums"] if separated and "drums" in parts else y
     tempo, beats = librosa.beat.beat_track(y=y_rhythm, sr=sr)
     bpm = float(np.atleast_1d(tempo)[0])
-    y_key = parts["other"][:n] if separated else y
+    y_key = y_chords
     chroma = librosa.feature.chroma_cqt(y=y_key, sr=sr)
     chroma_key_mean = chroma.mean(axis=1)
     tonic, mode, conf = estimate_key(chroma_key_mean)
@@ -136,7 +137,7 @@ def analyze(ref: Path, use_stems: bool = True) -> dict:
                 aggregate=np.median,
             )
             c_oth = librosa.util.sync(
-                librosa.feature.chroma_cqt(y=parts["other"][:n], sr=sr, fmin=fl, n_octaves=3),
+                librosa.feature.chroma_cqt(y=y_chords, sr=sr, fmin=fl, n_octaves=3),
                 beats,
                 aggregate=np.median,
             )
@@ -306,7 +307,14 @@ def to_markdown(r: dict, src: dict) -> str:
     lines.append(f"- 先頭16小節のコード(推定): {' / '.join(r['chords_per_bar_head'])}")
     lines.append("- よく使われるコード機能: " + "、".join(f"{k}×{v}" for k, v in r["common_roman"]))
     if r.get("part_balance"):
-        names = {"drums": "ドラム", "bass": "ベース", "other": "和音・その他", "vocals": "ボーカル"}
+        names = {
+            "drums": "ドラム",
+            "bass": "ベース",
+            "other": "その他",
+            "vocals": "ボーカル",
+            "guitar": "ギター",
+            "piano": "ピアノ",
+        }
         lines.append(
             "- パートの音量バランス(分離後): "
             + "、".join(f"{names[k]} {v:.0%}" for k, v in r["part_balance"].items())

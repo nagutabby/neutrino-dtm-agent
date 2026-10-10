@@ -9,7 +9,7 @@
 | 段階 | スクリプト | 出力(`projects/<song>/reference/<video-id>/`) |
 |---|---|---|
 | 取得 | `reference_fetch.sh` | `audio.wav`、`source.json`(タイトル等) |
-| 音源分離 | `reference_separate.py`(Demucs htdemucs) | `stems/{drums,bass,other,vocals}.wav`(コード・キー・リズムの推定用) |
+| 音源分離 | `reference_separate.py`(Demucs **htdemucs_6s**。`--model htdemucs` で4パート) | `stems/{drums,bass,other,vocals,guitar,piano}.wav`(コード・キー・リズムの推定用) |
 | 書き起こし | `reference_to_midi.py`(**MuScriptor**、多楽器対応) | `transcription.mid`(楽器ごとのトラック+ドラム) |
 | 分析 | `reference_analyze.py`(librosa) | `analysis.json`、`analysis.md` |
 
@@ -20,7 +20,7 @@
 1. Hugging Face にログインし、https://huggingface.co/MuScriptor/muscriptor-medium でライセンス(**CC BY-NC 4.0、非商用**)に同意(自動承認)。large を使うなら large も別に同意。
 2. `uvx hf auth login`(トークンは `~/.cache/huggingface/` に保存され、リポジトリには入らない。値をファイルやログに書かない)。
 
-MuScriptor は `uvx --from muscriptor==0.3.0` で版を固定して実行し、プロジェクトの Python 環境とは分離される。初回は重みを取得する。medium で CPU の場合、42秒の曲に約2分かかった(曲の長さの3倍程度)。`--model small|medium|large` で選べる。
+MuScriptor は `uvx --from muscriptor==0.3.0` で版を固定して実行し、プロジェクトの Python 環境とは分離される。初回は重みを取得する。medium で CPU の場合、42秒の曲に約2分、191秒の曲に約110秒かかった(曲の長さの0.6〜3倍と幅がある)。`--model small|medium|large` で選べる。
 
 ## 分析する特徴
 テンポ / キー(長調・短調)/ 小節ごとのコード(ローマ数字=機能で表示。短調は平行長調基準)/ 盛り上がりの形(8分割の音量)/ 音の明るさ / 刻みの細かさ / 書き起こし MIDI の音域・密度。
@@ -58,6 +58,12 @@ MuScriptor は `uvx --from muscriptor==0.3.0` で版を固定して実行し、�
 - A・D の3度が曖昧な小節は長/短を断定せず「A5」のように**3度不明**で表す(差が小さい場合のみ)。
 - ボーカルがほぼ無音の曲では、他の楽器の混ざり込みで偽のボーカル MIDI が出ていた。→ 無音に近いパートは書き起こさない。
 - 正解が分かる曲ではないので、**実曲での正答率は測れていない**。出力はあくまで仮説で、耳で確認する。
+
+## 6パート分離(htdemucs_6s)について
+- 既定は 6 パート版。ピアノとギターが `other` から分かれる。コード・キーの推定は bass と、other + guitar + piano の合算を使う。
+- 開発元が実験的としており、**ピアノ・ギターの分離は不安定**。実曲(ギター中心の曲)では、書き起こし上は主役のギターが guitar パートには 1% しか入らず、`other` に残った。ピアノは約 6% 分離されたが、取りこぼしや漏れは未検証(聴いて確認する)。
+- 分離を変えてもコード進行の推定精度は変わらなかった(キーの音階に収まるコードの割合 0.63 → 0.61)。コードの散らばりの主因は拍の揺れ(固定の小節区切りがずれる)と考えられる。
+- 4 パート版が欲しい場合は `reference_separate.py ... --model htdemucs`。
 
 ## 精度の限界(必ずユーザーに伝える)
 - 複数楽器が混ざった音声の書き起こしは不完全。MIDI は音域や密度の傾向を見る目安。

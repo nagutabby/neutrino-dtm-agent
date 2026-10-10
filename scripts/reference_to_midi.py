@@ -8,7 +8,7 @@
   1. Hugging Face で https://huggingface.co/MuScriptor/muscriptor-medium のライセンス(CC BY-NC 4.0)に同意
   2. uvx hf auth login
 `uvx` で版を固定して実行するため、プロジェクトの Python 環境とは分離される。初回は重みを取得する。
-CPU では曲の長さの 3 倍程度かかる(medium)。書き起こしは完全ではない。傾向を見る目安として使う。
+CPU では曲の長さの 0.6〜3 倍かかる(medium。実測: 42秒の曲で約2分、191秒の曲で約110秒)。書き起こしは完全ではない。傾向を見る目安として使う。
 """
 
 from __future__ import annotations
