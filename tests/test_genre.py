@@ -20,13 +20,14 @@ def write_profile(song_dir, gid, extra=""):
     )
 
 
-def write_inputs(song_dir, tracks, progression=()):
+def write_inputs(song_dir, tracks, progression=(), sections=()):
     """ユーザーの最初の指示(user_inputs.yaml)を書く。tracks は (spec, track, patch) の列。"""
     import yaml
 
     data = {
         "progression": [{"bars": b, "chord": c} for b, c in progression],
-        "tracks": [{"spec": sp, "track": tr, "label": tr, "sound": f"{tr} の音", "patch": pt} for sp, tr, pt in tracks],
+        "sections": [{"name": n, "bars": b} for n, b in sections],
+        "tracks": [{"spec": sp, "track": tr, "label": tr, "sound": f"{tr} の音", "usage": f"{tr} の使い方", "sampling": f"{tr} の技法", "patch": pt} for sp, tr, pt in tracks],
     }
     (song_dir / "user_inputs.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
@@ -161,3 +162,16 @@ def test_changed_progression_of_ready_harmony_needs_revision(demo, monkeypatch):
         run_apply(monkeypatch, "demo", "dark")
     h = common.load_specs("demo")["02-harmony"][0]
     assert h["status"] == "needs-revision" and h["progression"] == [{"bars": 4, "chord": "Am"}]
+
+
+def test_sections_and_usage_are_applied(demo, monkeypatch):
+    import common
+
+    write_profile(demo, "dark")
+    write_inputs(demo, TRACKS, [(2, "Am")], [("イントロ", 4), ("サビ", 8)])
+    with pytest.raises(SystemExit):
+        run_apply(monkeypatch, "demo", "dark")
+    specs = common.load_specs("demo")
+    assert specs["01-structure"][0]["sections"] == [{"name": "イントロ", "bars": 4}, {"name": "サビ", "bars": 8}]
+    assert specs["04-bass"][0]["usage"] == "bass の使い方"
+    assert specs["04-bass"][0]["sampling"] == "bass の技法"

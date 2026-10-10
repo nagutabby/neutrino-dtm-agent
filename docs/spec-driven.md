@@ -13,7 +13,7 @@ frontmatter: `status`(draft/ready/needs-revision)、`version`、`depends_on`、`
 - `09-mix` の `depends_on` の既定は「曲にあるトラック spec すべて」(インストは歌詞・ボーカルを除く)
 
 ## ループ
-1. 立案: 次に決められる要素(`spec_status.py`)について選択肢(最大3)と聴感への効果を提示(`auto` は AI が選ぶ)。**コード進行・トラックの音・サンプリングは立案しない**(曲の最初にユーザーが指示した `user_inputs.yaml` の内容だけ)
+1. 立案: 次に決められる要素(`spec_status.py`)について選択肢(最大3)と聴感への効果を提示(`auto` は AI が選ぶ)。**コード進行・セクション・トラックの音と使い方・サンプリングは立案しない**(曲の最初にユーザーが指示した `user_inputs.yaml` の内容だけ)
 2. 決定: spec が埋まったら `decide.py <song> <spec>` で ready に。**依存元が ready でなければ決定も生成もしない**。ユーザーの承認を待つゲートではない
 3. 生成: ready の spec のみを入力に作り、`register_track.py` で spec_versions を記録
 4. フィードバック → spec の**差分案**(例: 音域 C1〜C2→C2〜C3)→ ユーザーが了承したら version+1、`decisions` に追記

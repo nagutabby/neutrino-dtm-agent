@@ -8,7 +8,8 @@
 やること:
   - 00-concept.params に genre / target_seconds / tracks(トラック計画と音色パッチ ID)を書く
   - トラックと音(patch)・コード進行は user_inputs.yaml のユーザー指定だけを使う。ジャンル定義の tracks は使わない(AI は補わない・候補を出さない)
-  - user_inputs.yaml の progression を 02-harmony に書く
+  - user_inputs.yaml の progression を 02-harmony に、sections(セクション名と小節数)を 01-structure に書く
+  - トラックごとのユーザー指示 usage(どう生成し、曲のどこでどう使うか)・sampling(サンプリングの技法)をトラック spec に書く
   - トラック spec を作る(無ければ docs/templates/track-spec.md から)。ユーザーが指定しなかった draft のトラック spec は削除する
   - 曲の長さをテンポ候補ごとの小節数に換算して表示する
   - 最後に音色パッチを検査し(patches.py。この曲の登録簿だけを見る)、登録簿にない/引数が不正なら終了コード 2
@@ -70,11 +71,16 @@ def load_user_inputs(proj) -> dict:
         if t["track"] in seen:
             errs.append(f"track 名が重複: {t['track']}")
         seen.add(t["track"])
+        if t["track"] != "vocal" and not t.get("usage"):
+            print(f"[注意] {t['spec']}: usage がありません(どう生成し、曲のどこでどう使うかをユーザーに聞く)")
         if t["track"] != "vocal" and not t.get("patch"):
             errs.append(f"{t['spec']}: patch がありません(ユーザーが指示した音を synth/ にパッチとして作り、ID を書く)")
     for c in data.get("progression") or []:
         if not (isinstance(c, dict) and isinstance(c.get("bars"), int) and c["bars"] > 0 and isinstance(c.get("chord"), str)):
             errs.append(f"progression の書式が不正: {c}({{bars: 2, chord: Am}} の形)")
+    for sec in data.get("sections") or []:
+        if not (isinstance(sec, dict) and isinstance(sec.get("bars"), int) and sec["bars"] > 0 and isinstance(sec.get("name"), str)):
+            errs.append(f"sections の書式が不正: {sec}({{name: サビ, bars: 8}} の形)")
     if errs:
         print("\n".join(f"[エラー] {e}" for e in errs))
         sys.exit(2)
@@ -148,6 +154,22 @@ def main() -> None:
             if not a.dry_run:
                 write_spec(hpath, hmeta, hbody)
 
+    # 01-structure: ユーザーが指定したセクション(指定が無ければ触らない。AI は補わない)
+    secs = user.get("sections") or []
+    spath = spec_dir / "01-structure.md"
+    if secs and spath.exists():
+        smeta, sbody = read_spec(spath)
+        if smeta.get("sections") != secs:
+            if smeta.get("status") == READY and smeta.get("sections"):
+                smeta["status"] = "needs-revision"
+                log.append("01-structure: ユーザー指定のセクションが ready の内容と違うため needs-revision に戻しました(下流の再生成が必要)")
+            smeta["sections"] = secs
+            smeta.setdefault("decisions", []).append(
+                {"date": date.today().isoformat(), "version": smeta.get("version", 1), "note": "セクションはユーザー指定(user_inputs.yaml)"})
+            log.append(f"01-structure: sections={[x['name'] for x in secs]}(ユーザー指定)")
+            if not a.dry_run:
+                write_spec(spath, smeta, sbody)
+
     # トラック spec の作成・更新
     for t in tracks:
         key, trk = t["spec"], t.get("track")
@@ -162,6 +184,16 @@ def main() -> None:
             if trk == "vocal" or not pt:
                 continue
             p = meta.setdefault("params", {})
+            if t.get("sampling") and meta.get("sampling") != t["sampling"]:
+                meta["sampling"] = t["sampling"]  # ユーザーの言葉(サンプリングの技法)
+                log.append(f"{key}: sampling=ユーザー指示を記録")
+                if not a.dry_run:
+                    write_spec(path, meta, body)
+            if t.get("usage") and meta.get("usage") != t["usage"]:
+                meta["usage"] = t["usage"]  # ユーザーの言葉(どう生成し、どこでどう使うか)
+                log.append(f"{key}: usage=ユーザー指示を記録")
+                if not a.dry_run:
+                    write_spec(path, meta, body)
             if t.get("sound") and meta.get("sound") != t["sound"]:
                 meta["sound"] = t["sound"]  # ユーザーの言葉(音を作る根拠)
                 log.append(f"{key}: sound=ユーザー指示を記録")
@@ -183,6 +215,10 @@ def main() -> None:
             tmeta.update({"label": t.get("label", key), "track": trk})
             if t.get("sound"):
                 tmeta["sound"] = t["sound"]  # ユーザーの言葉(音を作る根拠)
+            if t.get("sampling"):
+                tmeta["sampling"] = t["sampling"]  # ユーザーの言葉(サンプリングの技法)
+            if t.get("usage"):
+                tmeta["usage"] = t["usage"]  # ユーザーの言葉(どう生成し、どこでどう使うか)
             tmeta["params"]["patch"] = pt
             if trk == "vocal":
                 tmeta["params"] = {}

@@ -2,9 +2,11 @@
 # 指示が無い項目は空のまま(AI が補わない。必要なら本人に聞き直す)。
 # コード進行(ユーザー指定)。genre_apply.py が 02-harmony に反映する
 progression: []   # 例: [{bars: 2, chord: Am}, {bars: 2, chord: F}]
+# セクション構成(ユーザー指定)。genre_apply.py が 01-structure に反映する
+sections: []   # 例: [{name: イントロ, bars: 4}, {name: サビ, bars: 8}]
 # 作るトラックと、そのトラックの音(ユーザー指定)。これ以外のトラックは作らない
 tracks: []
 # 例:
-#   - {spec: 03-drums, track: drums, label: ドラム, sound: "ユーザーの言葉のまま", patch: my_kit}
-#   - {spec: 10-hit, track: hit, label: 掛け声, sound: "自分で録った声", patch: my_voice_hit}   # patch の sample: は synth/patches.yaml 側
-# patch は projects/<song>/synth/patches.yaml の ID。sound はユーザーの言葉(音を作る根拠。AI の解釈で変えない)
+#   - {spec: 03-drums, track: drums, label: ドラム, sound: "ユーザーの言葉のまま", usage: "どう生成し、どのセクションでどう使うか(ユーザーの言葉)", patch: my_kit}
+#   - {spec: 10-hit, track: hit, label: 掛け声, sound: "自分で録った声", usage: "サビの頭で1回", sampling: "サンプリングの技法(ユーザーの言葉)", patch: my_voice_hit}   # patch の sample: は synth/patches.yaml 側
+# patch は projects/<song>/synth/patches.yaml の ID。sound は音そのもの、usage は生成と使い方(パターン・鳴らすセクション・役割)。どちらもユーザーの言葉で、AI の解釈で変えない

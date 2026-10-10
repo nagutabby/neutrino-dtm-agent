@@ -7,6 +7,7 @@
 
 ## 対象
 - 曲: `/Users/nagutabby/neutrino-dtm-agent/projects/<song>`(ジャンル <genre>、<BPM>、<キー>)
+- 参照: `/Users/nagutabby/neutrino-dtm-agent/docs/vocal-tuning.md`(NEUTRINO 調声メモ。必ず読む)
 - 歌詞: `lyrics/` の歌詞ファイル、歌詞付き MusicXML: `musicxml/`、旋律: `tracks/` の melody、spec: `spec/07-lyrics`・`spec/06-melody`・`00-concept`
 
 ## 見る観点
@@ -15,7 +16,7 @@
 3. 歌いやすさ: 速すぎる連続音節、息継ぎ(休符)のないフレーズ、極端な音域での母音(狭母音が高音に乗る等)、同じ子音の連続
 4. 構成: 区間(verse/chorus など)ごとの音節数・フレーズ数の対応、サビの言葉の繰り返しと展開
 5. 内容: `00-concept` のイメージとの整合、ジャンルらしさ、意味の通らない箇所。参考曲の歌詞の複製がないこと
-6. NEUTRINO 向け: ひらがな/カタカナ以外の混入、読みの曖昧な語
+6. NEUTRINO 向け: ひらがな/カタカナ以外の混入、読みの曖昧な語。**先に `docs/vocal-tuning.md` を読み**、その調声知識(読みの表記・二重母音・促音・母音脱落・長音・休符と息継ぎ・高音域・StyleShift/FormantShift/モデル)に照らして指摘と改善案を出す(改善案には該当節の手法を名指しする)
 
 ## 答え方
 - 先頭行に判定: **`気になる点なし`** または **`要修正`**。好みの差で指摘を作らない。
