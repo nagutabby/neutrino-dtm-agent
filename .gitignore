@@ -11,6 +11,10 @@ bin/
 model/
 *.bin
 
+# 曲のプロジェクト(spec・MIDI・notes.md を含め丸ごと追跡しない。ディレクトリ自体は .gitkeep で残す)
+projects/*
+!projects/.gitkeep
+
 # 生成音声・中間データ(容量大・既定では追跡しない)
 projects/*/output/
 projects/*/stems/

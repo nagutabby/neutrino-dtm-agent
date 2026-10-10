@@ -49,7 +49,7 @@
 - 新しい曲は必ず `scripts/new_song.sh <song>`(先に `--dry-run`)で作る。曲名は英数字・`_`・`-` のみ。既存曲は上書きしない。
 - 全スクリプトに `<song>` を明示して渡す。作業開始時に「いま扱う曲は `<song>`」と宣言し、曲が複数あって不明なら `AskUserQuestion` で確認する(推測しない)。
 - 曲を切り替えるときは、現在の曲の未完了(draft / needs-revision)の作業状況を一言で報告してから移る。
-- `projects/*/output|stems|mix` と音声はコミットしない(`.gitignore`)。spec・MIDI・`notes.md` は追跡対象。
+- `projects/` 配下(spec・MIDI・`notes.md`・音声を含むすべて)は git 管理しない(`.gitignore`)。`projects/.gitkeep` のみ追跡。
 
 ## トラック別・段階的レイヤリング
 
