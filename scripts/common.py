@@ -44,6 +44,16 @@ def require_project(song: str) -> Path:
     return p
 
 
+def safe_ref_dir(proj: Path, ref_id: str) -> Path:
+    """projects/<song>/reference/<id>/ を返す(id は動画 ID 形式のみ)。"""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", ref_id):
+        sys.exit(f"参考曲 ID は英数字・_・- のみ: {ref_id!r}")
+    d = proj / "reference" / ref_id
+    if not d.is_dir():
+        sys.exit(f"参考曲が見つかりません: {d}(reference_fetch.sh で取得)")
+    return d
+
+
 def reject_foreign_project(path: str | Path, song: str) -> None:
     """入力ファイルが別の曲の projects/<other>/ 配下なら拒否(曲の取り違え防止)。"""
     rp = Path(path).resolve()

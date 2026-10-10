@@ -29,3 +29,12 @@ def test_mix_rejects_non_numeric_step():
         assert r.returncode != 0 and "数字のみ" in r.stderr
     finally:
         (ROOT / "projects" / "_guardtest").rmdir()
+
+
+def test_reference_fetch_rejects_non_youtube_url():
+    (ROOT / "projects" / "_guardtest").mkdir(exist_ok=True)
+    try:
+        r = run("scripts/reference_fetch.sh", "_guardtest", "https://example.com/x")
+        assert r.returncode != 0 and "YouTube" in r.stderr
+    finally:
+        (ROOT / "projects" / "_guardtest").rmdir()
