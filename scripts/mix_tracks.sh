@@ -76,17 +76,31 @@ if [ -n "$LUFS" ] || [ "$(printf '%s\n' "${GAINS[@]}" "${PANS[@]}" | grep -vc '^
   FILTER=""; LABELS=""; i=0
   for f in "${INPUTS[@]}"; do
     # パン p(-1 左〜+1 右): 反対側のチャンネルだけ (1-|p|) に下げる
-    FILTER="${FILTER}[${i}:a]volume=${GAINS[$i]}dB,pan=stereo|c0=$(awk -v p="${PANS[$i]}" 'BEGIN{print (p>0)?1-p:1}')*c0|c1=$(awk -v p="${PANS[$i]}" 'BEGIN{print (p<0)?1+p:1}')*c1[a${i}];"
+    # モノ(NEUTRINO のボーカルなど)は両チャンネルに複製する。そのまま pan すると右が無音になる
+    CH="$(ffprobe -v error -select_streams a:0 -show_entries stream=channels -of csv=p=0 "$f" 2>/dev/null || echo 2)"
+    MONO=""; [ "$CH" = "1" ] && MONO="pan=stereo|c0=c0|c1=c0,"
+    FILTER="${FILTER}[${i}:a]${MONO}volume=${GAINS[$i]}dB,pan=stereo|c0=$(awk -v p="${PANS[$i]}" 'BEGIN{print (p>0)?1-p:1}')*c0|c1=$(awk -v p="${PANS[$i]}" 'BEGIN{print (p<0)?1+p:1}')*c1[a${i}];"
     LABELS="${LABELS}[a${i}]"; i=$((i + 1))
   done
   FILTER="${FILTER}${LABELS}amix=inputs=${#INPUTS[@]}:normalize=0"
-  [ -z "$LUFS" ] || FILTER="${FILTER},loudnorm=I=${LUFS}:TP=-1:LRA=11,aresample=48000"
-  FILTER="${FILTER},alimiter=limit=0.95"
+  if [ -n "$LUFS" ]; then
+    # 2パスの linear loudnorm: 1パス目で全体のラウドネスを測り、2パス目で一定ゲインにする
+    # (1パスの動的 loudnorm は静かな導入を持ち上げ、区間ごとに音量が動くため使わない)
+    NORM="loudnorm=I=${LUFS}:TP=-1:LRA=11"
+    if [ "${DRY_RUN:-0}" != 1 ]; then
+      M="$(ffmpeg -hide_banner -nostats -loglevel info "${ARGS[@]}" -filter_complex "${FILTER},loudnorm=I=${LUFS}:TP=-1:LRA=11:print_format=json" -f null - 2>&1 \
+        | python3 -c 'import sys,re,json; t=sys.stdin.read(); d=json.loads(re.findall(r"\{[^{}]*\}", t)[-1]); print("measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s" % (d["input_i"], d["input_tp"], d["input_lra"], d["input_thresh"], d["target_offset"]))')" \
+        || die "loudnorm の測定に失敗しました"
+      NORM="${NORM}:${M}:linear=true"
+    fi
+    FILTER="${FILTER},${NORM},aresample=48000"
+  fi
+  FILTER="${FILTER},alimiter=limit=0.89:level=disabled"
   # 導入の唐突さを避ける(loudnorm が静かな導入を持ち上げるため、最後にフェードインを掛ける)
   [ -z "$FADE_IN" ] || FILTER="${FILTER},afade=t=in:d=${FADE_IN}"
   echo "09-mix の設定を反映: 音量(dB)=${GAINS[*]} / パン=${PANS[*]} / 目標ラウドネス=${LUFS:-なし} LUFS"
 else
-  FILTER="amix=inputs=${#INPUTS[@]}:normalize=0,alimiter=limit=0.95"
+  FILTER="amix=inputs=${#INPUTS[@]}:normalize=0,alimiter=limit=0.89:level=disabled"
 fi
 run ffmpeg -hide_banner -loglevel error "${ARGS[@]}" -filter_complex "$FILTER" "$OUT"
 echo "出力: ${OUT#"$ROOT"/}"

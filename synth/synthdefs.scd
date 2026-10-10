@@ -196,5 +196,42 @@ SynthDef(\cowbell, { |out=0, freq=540, amp=0.4, pan=0, tune=540, ratio=1.48, dec
 	var env = EnvGen.kr(Env([1, 0.001], [decay], \exp), doneAction: 2);
 	var sig = BPF.ar(Pulse.ar(tune) + Pulse.ar(tune * ratio), bp, 0.6);
 	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// ---- ピアノ・ショット系(加算合成。サンプルは使わない) ----
+
+// ピアノ: 倍音8本(わずかに非整数=弦の硬さ)+ハンマーのノイズ。drive で歪ませる。tone が大きいほど明るい
+SynthDef(\piano, { |out=0, freq=261.6, amp=0.4, pan=0, gate=1, decay=1.6, tone=0.5, inharm=0.0004, hammer=0.25, drive=1.0, rel=0.25|
+	var env = EnvGen.kr(Env.asr(0.002, 1, rel), gate, doneAction: 2) * EnvGen.kr(Env([1, 0.02], [decay], \exp));
+	var n = (1..8);
+	var amps = n.collect { |k| (tone.linlin(0, 1, 0.35, 0.85) ** (k - 1)) / k };
+	var hs = freq * n * (1 + (inharm * n * n)).sqrt;
+	var body = Mix.ar(SinOsc.ar(hs.clip(20, 14000), 0, amps)) * 0.5;
+	var thump = LPF.ar(WhiteNoise.ar, freq * 6).clip2(1) * hammer * EnvGen.kr(Env([1, 0.001], [0.03], \exp));
+	var sig = ((body + thump) * drive).tanh / drive.max(1).sqrt;
+	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// ジャンプスタイル・キック: 高い所から急降下する短く硬いキック。ワンショット(音程=最終ピッチ)
+SynthDef(\kick_jump, { |out=0, freq=50, amp=0.8, pan=0, start=400, sweep=0.025, decay=0.22, click=0.5, drive=3.0|
+	var pitch = XLine.kr(start, freq.clip(30, 120), sweep);
+	var env = EnvGen.kr(Env([1, 0.001], [decay], \exp), doneAction: 2);
+	var sig = SinOsc.ar(pitch) + (HPF.ar(WhiteNoise.ar, 3000) * click * EnvGen.kr(Env([1, 0.001], [0.008], \exp)));
+	Out.ar(out, Pan2.ar((sig * drive).tanh * env * amp * 0.9, pan));
+}),
+
+// Montagem ショット: 金属的な短い叩き音(非整数倍の2本+バンドパス)。音程は freq。ワンショット
+SynthDef(\shot_montagem, { |out=0, freq=660, amp=0.4, pan=0, ratio=1.48, decay=0.22, bp=2600, snap=0.3|
+	var env = EnvGen.kr(Env([1, 0.001], [decay], \exp), doneAction: 2);
+	var sig = BPF.ar(Pulse.ar(freq) + Pulse.ar(freq * ratio), bp, 0.5) + (HPF.ar(WhiteNoise.ar, 5000) * snap * EnvGen.kr(Env([1, 0.001], [0.015], \exp)));
+	Out.ar(out, Pan2.ar(sig.tanh * env * amp, pan));
+}),
+
+// jmilton ショット(推定): 声っぽい短い「ハッ」。母音フォルマント+息のノイズが素早く減衰。ワンショット
+SynthDef(\shot_jmilton, { |out=0, freq=220, amp=0.35, pan=0, f1=800, f2=1300, bw=0.15, decay=0.16, breath=0.4|
+	var env = EnvGen.kr(Env([0.001, 1, 0.001], [0.004, decay], [0, -5]), doneAction: 2);
+	var src = Saw.ar(freq) + (WhiteNoise.ar * breath);
+	var sig = BPF.ar(src, f1, bw) + BPF.ar(src, f2, bw, 0.7);
+	Out.ar(out, Pan2.ar(sig * env * amp * 2, pan));
 })
 ]

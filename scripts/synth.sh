@@ -31,6 +31,8 @@ uv run "$ROOT/scripts/musicxml_validate.py" "$XML" || die "MusicXML の検査に
 
 export DYLD_LIBRARY_PATH="$NEUTRINO_DIR/bin:${DYLD_LIBRARY_PATH:-}"
 echo "$(date +%M:%S) : MusicXMLtoLabel"
+# NEUTRINO は settings/dic を相対パスで読むため、実行時のカレントを NEUTRINO_DIR にする(読み取りのみ。出力は絶対パスで projects/ へ)
+cd "$NEUTRINO_DIR"
 run "$NEUTRINO_DIR/bin/musicXMLtoLabel" "$XML" "$FULL" "$MONO"
 echo "$(date +%M:%S) : NEUTRINO (model=$MODEL)"
 run "$NEUTRINO_DIR/bin/neutrino" "$FULL" "$TIMING" "$OUT.f0" "$OUT.melspec" "$OUT.wav" \

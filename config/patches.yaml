@@ -111,6 +111,40 @@ patches:
     desc: 低音の落下+ノイズの破裂。ドロップ直前の一撃
     params: {amp: 0.6, pan: 0, boom: 45, decay: 2.2, noise: 0.5}
 
+  piano_low:
+    name: 低音ピアノ(歪み)
+    kind: melodic
+    synthdef: piano
+    desc: 低域の暗い倍音+強い歪み。長めに沈むピアノ。Montagem の重い低音ピアノ
+    params: {amp: 0.5, pan: 0, decay: 2.2, tone: 0.25, inharm: 0.0006, hammer: 0.3, drive: 4.0, rel: 0.3}
+  piano_bright:
+    name: メロディピアノ
+    kind: melodic
+    synthdef: piano
+    desc: 明るい倍音の素直なピアノ。J-Pop 風の旋律用
+    params: {amp: 0.4, pan: 0, decay: 1.4, tone: 0.7, inharm: 0.0003, hammer: 0.2, drive: 1.0, rel: 0.25}
+  kick_jump:
+    name: ジャンプスタイルキック
+    kind: melodic
+    synthdef: kick_jump
+    oneshot: true
+    desc: 高い音から急降下する短く硬いキック。ワンショット(ノートの高さ=最終ピッチ)
+    params: {amp: 0.8, pan: 0, start: 400, sweep: 0.025, decay: 0.22, click: 0.5, drive: 3.0}
+  shot_montagem:
+    name: Montagem ショット
+    kind: melodic
+    synthdef: shot_montagem
+    oneshot: true
+    desc: 金属的な短い叩き音(カウベル寄り)。ワンショット
+    params: {amp: 0.4, pan: 0, ratio: 1.48, decay: 0.22, bp: 2600, snap: 0.3}
+  shot_jmilton:
+    name: jmilton ショット
+    kind: melodic
+    synthdef: shot_jmilton
+    oneshot: true
+    desc: 声っぽい短い「ハッ」(推定の音色)。母音フォルマント+息。ワンショット
+    params: {amp: 0.35, pan: 0, f1: 800, f2: 1300, bw: 0.15, decay: 0.16, breath: 0.4}
+
   kit_acoustic:
     name: アコースティック風キット
     kind: drums
