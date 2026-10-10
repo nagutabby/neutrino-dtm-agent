@@ -21,10 +21,11 @@
 
 ## ジャンル駆動(トラック構成・長さ・音源はジャンルで決まる)
 
-- **ジャンルはユーザーに聞く**(推測しない)。聞いたら `genre-research` で特徴を調べ(`docs/genres/<id>.md`、無ければ Web 検索で定義案を作る)、内容をユーザーに見せて確認する。
-- `scripts/genre_apply.py <song> <genre-id> --length-seconds N --run-mode step|auto` でトラック計画・曲の長さ・音源を曲に反映する。ジャンルが使わないトラックの spec は作らない(例: Phonk は 808 ベースとカウベル旋律、Lo-fi はエレピ中心)。標準外のトラックは `10-fx` のように 10 以降の番号で足す。
+- **ジャンルはユーザーに聞く**(推測しない)。**ジャンルごとの定義やトラック構成は予め用意しない**。聞いたら `genre-research` で毎回 Web 検索し、そのジャンルに基づく定義案(トラック計画を含む)を `projects/<song>/genre/<id>.md` に作り、トラック制作の前に内容をユーザーに見せて確認する。
+- `scripts/genre_apply.py <song> <genre-id> --length-seconds N --run-mode step|auto` でトラック計画・曲の長さ・音源を曲に反映する。ジャンルが使わないトラックの spec は作らない。標準外のトラックは `10-fx` のように 10 以降の番号で足す。
+- **伴奏は最低10トラック**(ボーカル・歌詞を除く)。調べたジャンル定義のトラック計画は、リズム(ドラム・小物打楽器)/低音/和音/旋律/対旋律/厚み(パッド・ストリングス)/動き(アルペジオ)/質感・FX の役割を分けて10本以上にする。10本未満だと `genre_apply.py` がエラー(終了コード 2)にする。足りないトラックは新しいパッチ(SynthDef)を足してよい。`1ステップに足すトラックは1本まで`は変えない(10本を一度に作らず1本ずつ重ねる)。
 - **曲の長さは必ず聞く**(秒の目安)。小節数は `テンポ × 秒` から換算して `01-structure` に入れる。ジャンルの標準尺から外れる場合は一言伝える。
-- **伴奏の音は必ず SuperCollider で作る**(厳守)。サンプル・SoundFont・外部の音源・収集した MIDI の再生音・他ツールの合成音を最終音に使わない。足りない音色は `synthdefs.scd` に SynthDef を足して作る(歌声のみ NEUTRINO)。音色はシンセでゼロから合成する。トラックは `params.patch`(`config/patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決め、実体は `synth/synthdefs.scd`(SuperCollider)。一覧は `uv run scripts/patches.py list`、引数は `patches.py show <id>`、曲の検査は `patches.py check <song>`(不正は終了コード 2。直してから進む)。足りない音色は `synthdefs.scd` と `patches.yaml` に足してよい(ユーザーに一言伝える)。仕組みは `docs/synthesis.md`。
+- **伴奏の音は必ず SuperCollider で作る**(厳守)。サンプル・SoundFont・外部の音源・参考曲の音声・他ツールの合成音を最終音に使わない。足りない音色は `synthdefs.scd` に SynthDef を足して作る(歌声のみ NEUTRINO)。音色はシンセでゼロから合成する。トラックは `params.patch`(`config/patches.yaml` の ID)と `patch_params`(引数の上書き)で音色を決め、実体は `synth/synthdefs.scd`(SuperCollider)。一覧は `uv run scripts/patches.py list`、引数は `patches.py show <id>`、曲の検査は `patches.py check <song>`(不正は終了コード 2。直してから進む)。足りない音色は `synthdefs.scd` と `patches.yaml` に足してよい(ユーザーに一言伝える)。仕組みは `docs/synthesis.md`。
 
 ## サウンドチェック(音楽制作の前に全トラックの音を作る)
 
@@ -46,7 +47,7 @@
 ## プロジェクト(曲)ごとのディレクトリ
 
 - **1曲 = 1ディレクトリ `projects/<song>/`**。spec・MIDI・stems・mix・musicxml・label・output・`notes.md` はすべてその中に置く。曲をまたいでファイルを共有・上書きしない。
-- 新しい曲は必ず `scripts/new_song.sh <song>`(先に `--dry-run`)で作る。曲名は英数字・`_`・`-` のみ。既存曲は上書きしない。
+- 新しい曲は必ず `scripts/new_song.sh`(先に `--dry-run`)で作る。**プロジェクト名は `日付-連番`(例: `20261010-01`)で自動付与**され、名前は聞かない・指定しない。同じ日の2つ目以降は連番が増える。既存曲は上書きしない。
 - 全スクリプトに `<song>` を明示して渡す。作業開始時に「いま扱う曲は `<song>`」と宣言し、曲が複数あって不明なら `AskUserQuestion` で確認する(推測しない)。
 - 曲を切り替えるときは、現在の曲の未完了(draft / needs-revision)の作業状況を一言で報告してから移る。
 - `projects/` 配下(spec・MIDI・`notes.md`・音声を含むすべて)は git 管理しない(`.gitignore`)。`projects/.gitkeep` のみ追跡。
@@ -106,8 +107,8 @@
 
 ## コマンド(`.claude/commands/`)
 
-`/reference <曲名> <YouTube URL>`: 参考曲の音声取得 → 音源分離 → 雰囲気分析(音声から。MIDI への書き起こしはしない)。ジャンル・雰囲気が決まったら Web 検索で類似曲の MIDI を取得して解析(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
-`/new-song [曲名]`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → パッチ検査 → サウンドチェック(全トラック試奏) → concept 確定まで進める開始コマンド。
+`/reference <曲名> <YouTube URL>`: 参考曲の YouTube 取得 → 音源分離 → 雰囲気分析(音声から。MIDI の書き起こし・検索はしない)。ジャンル・雰囲気が決まったら Web 検索で類似曲を探し、同じく YouTube 取得・音源分離・分析して、参考曲+類似曲の共通点を few-shot の例にまとめる(`docs/reference-analysis.md`)。私的分析のみ・旋律や歌詞を複製しない・音声と MIDI をコミットしない。
+`/new-song`: 環境確認 → 5問ヒアリング(参考曲・ジャンル・長さ・歌/インスト・進め方) → `projects/<song>/` 作成 → ジャンル調査・反映 → パッチ検査 → サウンドチェック(全トラック試奏) → concept 確定まで進める開始コマンド。
 
 ## スキル(`.claude/skills/`)
 

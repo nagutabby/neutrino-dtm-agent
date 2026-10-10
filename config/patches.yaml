@@ -4,7 +4,8 @@
 # 共通: amp=音量(0〜1)、pan=定位(-1〜1)。ベロシティは amp に掛かる(MIDI の 0〜127 → 0〜1)。
 # kind: melodic = ノートごとに音程を変えて鳴らす / drums = ノート番号で打楽器を切り替える。
 # mono: true = 音が重なる/連続するとき同じ音を保ち音程だけ滑らせる(808 のグライド)。
-defaults: {drums: kit_acoustic, bass: bass_saw, chords: epiano, melody: lead_square, pad: pad_saw, piano: epiano, counter: pluck, perc: kit_808, fx: riser}
+defaults: {drums: kit_acoustic, bass: bass_saw, chords: epiano, melody: lead_square, pad: pad_saw, piano: epiano, counter: flute, perc: kit_perc, fx: riser,
+  strings: strings, organ: organ, arp: synth_pluck, stab: stab, guitar: pluck, choir: choir, vinyl: vinyl, hats: kit_808, impact: impact}
 
 patches:
   sub808:
@@ -52,6 +53,49 @@ patches:
     synthdef: bell
     desc: 非整数倍 FM の金属的な音。カウベル旋律・ベルのフレーズ
     params: {amp: 0.35, pan: 0, ratio: 1.4, index: 3.0, decay: 0.9, rel: 0.1}
+  strings:
+    name: ストリングス
+    kind: melodic
+    synthdef: strings
+    desc: デチューンしたノコギリ波3本+ビブラート。パッドより明るい持続音。ポップの厚み付け
+    params: {amp: 0.3, pan: 0, detune: 0.008, cutoff: 3500, vib_rate: 5, vib_depth: 0.004, atk: 0.5, rel: 1.0}
+  organ:
+    name: オルガン
+    kind: melodic
+    synthdef: organ
+    desc: 加算合成のドローバーオルガン。bright で倍音を増やす。ゆれ(leslie)付き
+    params: {amp: 0.3, pan: 0, bright: 0.5, leslie: 6, atk: 0.01, rel: 0.12}
+  synth_pluck:
+    name: シンセ・プラック
+    kind: melodic
+    synthdef: synth_pluck
+    desc: パルス波+素早く閉じるローパス。アルペジオ向けの短い音
+    params: {amp: 0.35, pan: 0, cutoff: 800, env_amt: 4000, res: 0.3, width: 0.4, decay: 0.25, rel: 0.05}
+  stab:
+    name: スタブ
+    kind: melodic
+    synthdef: stab
+    desc: デチューンしたノコギリ波を短く切る和音向けの音。ブラス/シンセ・スタブ
+    params: {amp: 0.3, pan: 0, detune: 0.01, cutoff: 700, env_amt: 3000, res: 0.2, decay: 0.18, rel: 0.08}
+  flute:
+    name: フルート
+    kind: melodic
+    synthdef: flute
+    mono: true
+    desc: サイン波+2倍音+息のノイズ+ビブラート。やわらかい対旋律向け
+    params: {amp: 0.35, pan: 0, breath: 0.15, vib_rate: 5, vib_depth: 0.008, atk: 0.08, rel: 0.2}
+  choir:
+    name: コーラス(母音)
+    kind: melodic
+    synthdef: choir
+    desc: フォルマント合成の合唱風の音。f1/f2 で母音が変わる(700/1200=あ、300/2300=い)
+    params: {amp: 0.18, pan: 0, f1: 700, f2: 1200, bw: 120, detune: 0.004, atk: 0.15, rel: 0.5}
+  vinyl:
+    name: ビニールノイズ
+    kind: melodic
+    synthdef: vinyl
+    desc: プチプチ音+薄いヒスノイズ。音程は無関係でノートの長さ分鳴る。Lo-fi の質感
+    params: {amp: 0.3, pan: 0, density: 8, hiss: 0.02, hp: 2000, rel: 0.3}
   riser:
     name: ライザー
     kind: melodic
@@ -97,3 +141,15 @@ patches:
       tom_high: {notes: [47, 48, 50], synthdef: tom, params: {amp: 0.6, tune: 140, sweep: 0.08, decay: 0.4}}
       crash: {notes: [49, 51, 52, 55, 57], synthdef: crash, params: {amp: 0.25, tune: 6000, decay: 1.5}}
       cowbell: {notes: [56], synthdef: cowbell, params: {amp: 0.45, tune: 560, ratio: 1.48, decay: 0.4, bp: 2600}}
+  kit_perc:
+    name: パーカッション・キット
+    kind: drums
+    desc: シェイカー・タンバリン・コンガ・クラベス等の小物打楽器。ドラムとは別トラックで重ねる(GM 番号 70/82 シェイカー、54 タンバリン、62〜64 コンガ、75 クラベス、56 カウベル、39 クラップ)
+    pieces:
+      shaker:  {notes: [69, 70, 82], synthdef: shaker, params: {amp: 0.3, tune: 6500, decay: 0.08, bw: 0.5}}
+      tambourine: {notes: [54], synthdef: hat, params: {amp: 0.25, tune: 9000, decay: 0.14, tone: 0.6}}
+      conga_high: {notes: [60, 62, 63], synthdef: tom, params: {amp: 0.5, tune: 260, sweep: 0.03, decay: 0.2}}
+      conga_low:  {notes: [61, 64], synthdef: tom, params: {amp: 0.5, tune: 190, sweep: 0.04, decay: 0.28}}
+      claves: {notes: [75], synthdef: rim, params: {amp: 0.35, tune: 2500, decay: 0.05}}
+      cowbell: {notes: [56], synthdef: cowbell, params: {amp: 0.35, tune: 600, ratio: 1.48, decay: 0.3, bp: 2400}}
+      clap:  {notes: [39], synthdef: clap, params: {amp: 0.4, tune: 1200, decay: 0.25, spread: 0.012}}

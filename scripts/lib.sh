@@ -26,7 +26,7 @@ song_dir() {
   case "$1" in
     ''|*[!A-Za-z0-9_-]*) die "曲名は英数字・_・- のみ: '$1'" ;;
   esac
-  [ -d "$ROOT/projects/$1" ] || die "プロジェクトがありません: projects/$1(scripts/new_song.sh $1)"
+  [ -d "$ROOT/projects/$1" ] || die "プロジェクトがありません: projects/$1(scripts/new_song.sh で作成)"
   echo "$ROOT/projects/$1"
 }
 

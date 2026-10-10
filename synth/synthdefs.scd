@@ -62,6 +62,65 @@ SynthDef(\bell, { |out=0, freq=660, amp=0.35, pan=0, gate=1, ratio=1.4, index=3.
 	Out.ar(out, Pan2.ar(sig * env * amp * 0.7, pan));
 }),
 
+// ストリングス: 3本のデチューンしたノコギリ波+ビブラート+ローパス。パッドより明るく、ゆっくり立ち上がる
+SynthDef(\strings, { |out=0, freq=220, amp=0.3, pan=0, gate=1, detune=0.008, cutoff=3500, vib_rate=5, vib_depth=0.004, atk=0.5, rel=1.0|
+	var env = EnvGen.kr(Env.asr(atk, 1, rel), gate, doneAction: 2);
+	var vib = SinOsc.kr(vib_rate) * vib_depth;
+	var osc = Mix.ar(Saw.ar(freq * (1 + vib) * [1 - detune, 1, 1 + detune])) * 0.3;
+	var sig = LPF.ar(osc, cutoff.clip(40, 12000));
+	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// オルガン: 加算合成(ドローバー)。bright が大きいほど 3倍音・4倍音が増えて明るい。leslie は揺れの速さ
+SynthDef(\organ, { |out=0, freq=261.6, amp=0.3, pan=0, gate=1, bright=0.5, leslie=6, atk=0.01, rel=0.12|
+	var env = EnvGen.kr(Env.asr(atk, 1, rel), gate, doneAction: 2);
+	var f = freq * (1 + (SinOsc.kr(leslie) * 0.002));
+	var sig = Mix.ar(SinOsc.ar(f * [0.5, 1, 2, 3, 4], 0, [0.6, 1, 0.6, bright * 0.5, bright * 0.35])) * 0.3;
+	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// シンセ・プラック(アルペジオ向け): パルス波+ローパスが素早く閉じる短い音
+SynthDef(\synth_pluck, { |out=0, freq=440, amp=0.35, pan=0, gate=1, cutoff=800, env_amt=4000, res=0.3, width=0.4, decay=0.25, rel=0.05|
+	var env = EnvGen.kr(Env.asr(0.002, 1, rel), gate, doneAction: 2) * EnvGen.kr(Env([1, 0.001], [decay * 2], \exp));
+	var fenv = EnvGen.kr(Env([1, 0], [decay], \exp));
+	var sig = RLPF.ar(Pulse.ar(freq, width), (cutoff + (env_amt * fenv)).clip(40, 12000), res.linlin(0, 1, 1, 0.1));
+	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// スタブ: デチューンしたノコギリ波を短く切る和音向けの音。ブラス/シンセ・スタブ
+SynthDef(\stab, { |out=0, freq=440, amp=0.3, pan=0, gate=1, detune=0.01, cutoff=700, env_amt=3000, res=0.2, decay=0.18, rel=0.08|
+	var env = EnvGen.kr(Env.asr(0.003, 1, rel), gate, doneAction: 2) * EnvGen.kr(Env([1, 0.15], [decay * 2], \exp));
+	var fenv = EnvGen.kr(Env([1, 0], [decay], \exp));
+	var osc = Mix.ar(Saw.ar(freq * [1 - detune, 1, 1 + detune])) * 0.33;
+	var sig = RLPF.ar(osc, (cutoff + (env_amt * fenv)).clip(40, 12000), res.linlin(0, 1, 1, 0.1));
+	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// フルート: サイン波+2倍音+息のノイズ+ビブラート。対旋律(カウンターメロディ)向けのやわらかい音
+SynthDef(\flute, { |out=0, freq=660, amp=0.35, pan=0, gate=1, breath=0.15, vib_rate=5, vib_depth=0.008, atk=0.08, rel=0.2|
+	var env = EnvGen.kr(Env.asr(atk, 1, rel), gate, doneAction: 2);
+	var f = freq * (1 + (SinOsc.kr(vib_rate) * vib_depth * EnvGen.kr(Env([0, 0, 1], [0.15, 0.3]))));
+	var tone = SinOsc.ar(f) + (SinOsc.ar(f * 2) * 0.25);
+	var air = BPF.ar(WhiteNoise.ar, (f * 2).clip(100, 12000), 0.5) * breath;
+	Out.ar(out, Pan2.ar((tone + air) * env * amp * 0.7, pan));
+}),
+
+// 合唱(コーラス/ボイス風): 2つのフォルマント(母音の共鳴)をかけた音。f1/f2 を変えると母音が変わる(700/1200=「あ」、300/2300=「い」)
+SynthDef(\choir, { |out=0, freq=220, amp=0.18, pan=0, gate=1, f1=700, f2=1200, bw=120, detune=0.004, atk=0.15, rel=0.5|
+	var env = EnvGen.kr(Env.asr(atk, 1, rel), gate, doneAction: 2);
+	var vib = 1 + (SinOsc.kr(5.2) * 0.004);
+	var voice = Formant.ar(freq * vib, f1, bw) + (Formant.ar(freq * vib * (1 + detune), f2, bw) * 0.6);
+	Out.ar(out, Pan2.ar(voice * env * amp * 0.5, pan));
+}),
+
+// ビニールノイズ: ホコリのプチプチ音(Dust)+薄いヒスノイズ。音程は無関係で、ノートの長さ分鳴る。Lo-fi の質感用
+SynthDef(\vinyl, { |out=0, freq=60, amp=0.3, pan=0, gate=1, density=8, hiss=0.02, hp=2000, rel=0.3|
+	var env = EnvGen.kr(Env.asr(0.3, 1, rel), gate, doneAction: 2);
+	var pops = HPF.ar(Decay2.ar(Dust.ar(density), 0.0005, 0.004) * 4, hp * 0.5);
+	var air = HPF.ar(PinkNoise.ar(hiss), hp);
+	Out.ar(out, Pan2.ar((pops + air) * env * amp, pan));
+}),
+
 // ---- 効果音(dur = ノートの長さ。synth_render.py が自動で渡す) ----
 
 // ライザー: ノイズのバンドパスが dur かけて低→高へ。音量も上がり、ノート終了で切れる
@@ -124,6 +183,12 @@ SynthDef(\rim, { |out=0, freq=1700, amp=0.4, pan=0, tune=1700, decay=0.03|
 	var env = EnvGen.kr(Env([1, 0.001], [decay], \exp), doneAction: 2);
 	var sig = SinOsc.ar(tune) + (HPF.ar(WhiteNoise.ar, 3000) * 0.5);
 	Out.ar(out, Pan2.ar(sig * env * amp, pan));
+}),
+
+// シェイカー/マラカス: バンドパスしたノイズの短いバースト(立ち上がりがやや遅く「シャッ」と鳴る)
+SynthDef(\shaker, { |out=0, freq=6500, amp=0.3, pan=0, tune=6500, decay=0.08, bw=0.5|
+	var env = EnvGen.kr(Env([0.001, 1, 0.001], [decay * 0.3, decay], [2, -4]), doneAction: 2);
+	Out.ar(out, Pan2.ar(BPF.ar(WhiteNoise.ar, tune.clip(500, 16000), bw) * env * amp * 2, pan));
 }),
 
 // カウベル: 2本の矩形波(約 540 / 800 Hz)をバンドパス。Phonk の定番

@@ -4,7 +4,7 @@
 
 ## spec ファイル
 `00-concept` `01-structure` `02-harmony` `03-drums` `04-bass` `05-chords` `06-melody` `07-lyrics` `08-vocal` `09-mix`(標準)+ ジャンルが要るトラックを `10-xxx` 以降で追加。
-**使うトラックはジャンルで決まる**(`docs/genres/<id>.md` → `genre_apply.py` が曲に反映)。使わないトラックの spec ファイルは作らない/削除される。
+**使うトラックはジャンルで決まる**(`genre-research` が曲ごとに `projects/<song>/genre/<id>.md` を作る → `genre_apply.py` が曲に反映)。使わないトラックの spec ファイルは作らない/削除される。
 
 frontmatter: `status`(draft/ready/needs-revision)、`version`、`depends_on`、`params`(機械可読。spec_check の基準)、`decisions`(決定と理由=学習ログ)、`open_questions`。標準外のトラック spec は `label` / `track` も持つ。
 - `00-concept`: `vocal`、`run_mode`(step/auto)、`params.genre` `params.target_seconds` `params.tracks`(`[{spec, track, patch}]`)

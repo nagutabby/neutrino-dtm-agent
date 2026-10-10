@@ -26,14 +26,29 @@ DRUMS = (
     + [(0.0, 0.1, 36), (1.0, 0.1, 38), (2.0, 0.1, 36), (2.5, 0.1, 36), (3.0, 0.1, 38)]
     + [(3.5, 0.1, 56)]
 )
+ARP = [(i * 0.25, 0.2, n) for i, n in enumerate([60, 63, 67, 72, 67, 63, 60, 63, 67, 72, 75, 72, 67, 63, 60, 63])]
+STAB = [(0.0, 0.2, n) for n in (60, 63, 67)] + [(0.75, 0.2, n) for n in (60, 63, 67)] + [(2.0, 0.2, n) for n in (56, 60, 63)]
+PERC = (
+    [(i * 0.25, 0.05, 70) for i in range(16)]
+    + [(1.0, 0.1, 54), (3.0, 0.1, 54), (0.5, 0.1, 63), (2.5, 0.1, 64), (3.5, 0.1, 75)]
+)
+LONG = [(0.0, 3.5, 60)]
+# パッチごとの専用フレーズ(音程と無関係な質感・効果音・ワンショット)
+BY_PATCH = {"vinyl": LONG, "impact": [(0.0, 0.5, 36)], "riser": [(0.0, 3.0, 60)]}
 
 
-def phrase(track: str, entry: dict) -> list[tuple[float, float, int]]:
+def phrase(track: str, entry: dict, patch_id: str = "") -> list[tuple[float, float, int]]:
+    if patch_id in BY_PATCH:
+        return BY_PATCH[patch_id]
     if entry["kind"] == "drums":
-        return DRUMS
+        return PERC if patch_id == "kit_perc" else DRUMS
+    if track == "arp":
+        return ARP
+    if track == "stab":
+        return STAB
     if track in ("bass",):
         return LOW
-    if track in ("chords", "pad", "piano"):
+    if track in ("chords", "pad", "piano", "strings", "organ", "choir"):
         return CHORD
     if track in ("fx",):
         return [(0.0, 3.0, 60)]
@@ -63,7 +78,7 @@ def main() -> None:
         if target.exists() and not a.force:
             print(f"- {target.name}: 既にあります(作り直すなら --force)")
             continue
-        notes = [{"start": s, "end": s + d, "note": n, "vel": 100, "ch": 0} for s, d, n in phrase(trk, reg[pid])]
+        notes = [{"start": s, "end": s + d, "note": n, "vel": 100, "ch": 0} for s, d, n in phrase(trk, reg[pid], pid)]
         voices = sr.build_voices(notes, reg[pid], overrides)
         print(f"■ {label_of(specs, key)}({trk}): パッチ {pid}")
         sr.synthesize(voices, sr.end_time(voices), target, a.dry_run)

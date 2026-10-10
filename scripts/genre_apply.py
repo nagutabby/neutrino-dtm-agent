@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ジャンル定義(docs/genres/<id>.md か projects/<song>/genre/<id>.md)を曲に反映する。
+"""ジャンル定義(projects/<song>/genre/<id>.md。ジャンル別の定義は予め用意せず、曲ごとに調べて作る)を曲に反映する。
 
   genre_apply.py <song> <genre-id> [--length-seconds N] [--run-mode step|auto] [--dry-run]
   genre_apply.py --list
@@ -41,11 +41,14 @@ def profile_path(proj, gid: str):
     for p in (proj / "genre" / f"{gid}.md", GENRES / f"{gid}.md"):
         if p.is_file():
             return p
-    sys.exit(f"ジャンル定義がありません: {gid}(docs/genres/_template.md を元に調べて作る)")
+    sys.exit(f"ジャンル定義がありません: {gid}(docs/genres/_template.md を元に、ジャンルを調べて projects/<song>/genre/ に作る)")
 
 
 def bars_for(seconds: float, bpm: float, beats: int = 4) -> int:
     return round(seconds * bpm / 60 / beats)
+
+
+MIN_TRACKS = 10  # ボーカル・歌詞を除く伴奏トラックの最低本数
 
 
 def main() -> None:
@@ -70,6 +73,10 @@ def main() -> None:
     proj = require_project(a.song)
     prof, _ = read_spec(profile_path(proj, a.genre))
     tracks = [t for t in prof.get("tracks", []) if isinstance(t, dict) and t.get("spec")]
+    n_acc = len([t for t in tracks if t.get("track") and t["track"] != "vocal"])
+    if n_acc < MIN_TRACKS:
+        print(f"[エラー] 伴奏トラックが {n_acc} 本です(ボーカル・歌詞を除き {MIN_TRACKS} 本以上必要)。ジャンル定義の tracks を足してください")
+        sys.exit(2)
     tempo = prof.get("tempo", {})
     lengths = prof.get("length_seconds", {})
     seconds = a.length_seconds or lengths.get("default")

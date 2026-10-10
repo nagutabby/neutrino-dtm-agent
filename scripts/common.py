@@ -59,7 +59,7 @@ def project_dir(song: str) -> Path:
 def require_project(song: str) -> Path:
     p = project_dir(song)
     if not p.is_dir():
-        sys.exit(f"プロジェクトが見つかりません: {p}(scripts/new_song.sh {song} で作成)")
+        sys.exit(f"プロジェクトが見つかりません: {p}(scripts/new_song.sh で日付-連番の名前で作成)")
     return p
 
 
