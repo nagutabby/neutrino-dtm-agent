@@ -11,6 +11,6 @@ description: 新しい曲を始めるとき。参考曲・ジャンル・曲の�
    5. **進め方**: ステップごとに進める(`step`: 1トラックごとに聴いて確認) / すべて作り切る(`auto`: 最後にまとめて提示)。
 2. `scripts/new_song.sh` を実行(先に `--dry-run` で確認)。プロジェクト名は `日付-連番`(例: `20261010-01`)で自動付与される。曲名は聞かない。出力された名前を以降の `<song>` に使う。
 3. 集めた URL ごとに `/reference` の手順(`scripts/reference_run.sh <song> <url>`、先に `--dry-run`)で分析する(YouTube 取得・音源分離・音声の分析まで。MIDI への書き起こし・MIDI 検索はしない)。1 より前に質問1だけ済ませて 3 を実行し、2 以降の質問に分析結果を活かしてよい。全 URL の分析後、`reference_summary.py` で共通点を few-shot の例にまとめる(類似曲の Web 検索はしない)。
-4. **`genre-research` スキル**でジャンルを調べ、`genre_apply.py` で反映する(長さ・`run_mode` を渡す)。パッチ検査(`patches.py check`)でエラーがあれば直す。続けて**サウンドチェック**(`patch_audition.py <song>` で全トラックの試奏を作り、音色を確認)を済ませてから制作に入る。
+4. **`genre-research` スキル**でジャンルを調べ、`genre_apply.py` で反映する(長さ・`run_mode` を渡す)。**作るトラックをユーザーに聞き**(`genre-research` 手順5)、回答どおりに反映する。パッチ検査(`patches.py check`)でエラーがあれば直す。続けて**サウンドチェック**(`patch_audition.py <song>` で全トラックの試奏を作り、音色を確認)を済ませてから制作に入る。
 5. 回答と分析結果(複数あれば共通点・違いを整理)を `spec/00-concept.md` に反映(`vocal: true|false`・`run_mode`・`params.genre/target_seconds/tracks` を必ず記入。インスト曲は歌詞・ボーカル前提の説明を出さない)。内容を見せてから `uv run scripts/decide.py <song> 00-concept` で ready にする。
 6. `uv run scripts/spec_status.py <song>` で次に決める要素を案内する。

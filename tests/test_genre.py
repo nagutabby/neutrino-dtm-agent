@@ -104,3 +104,25 @@ def test_fewer_than_10_tracks_is_an_error(song, monkeypatch, capsys):
     with pytest.raises(SystemExit) as e:
         run_apply(monkeypatch, "demo", "few")
     assert e.value.code == 2 and "10 本以上" in capsys.readouterr().out
+
+
+def test_tracks_option_builds_only_chosen(song, monkeypatch):
+    """ユーザーが選んだ伴奏トラックだけを作る(10本未満でもよい)。"""
+    import common
+
+    write_profile(common.require_project("demo"), "dark", TEN)
+    with pytest.raises(SystemExit) as e:
+        run_apply(monkeypatch, "demo", "dark", "--tracks", "drums,bass,melody")
+    assert e.value.code == 0
+    specs = common.load_specs("demo")
+    assert [t["track"] for t in specs["00-concept"][0]["params"]["tracks"]] == ["drums", "bass", "melody"]
+    assert "10-hats" not in specs and "15-impact" not in specs
+
+
+def test_tracks_option_unknown_is_an_error(song, monkeypatch, capsys):
+    import common
+
+    write_profile(common.require_project("demo"), "dark", TEN)
+    with pytest.raises(SystemExit) as e:
+        run_apply(monkeypatch, "demo", "dark", "--tracks", "drums,kazoo")
+    assert e.value.code == 2 and "kazoo" in capsys.readouterr().out

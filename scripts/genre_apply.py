@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """ジャンル定義(projects/<song>/genre/<id>.md。ジャンル別の定義は予め用意せず、曲ごとに調べて作る)を曲に反映する。
 
-  genre_apply.py <song> <genre-id> [--length-seconds N] [--run-mode step|auto] [--dry-run]
+  genre_apply.py <song> <genre-id> [--length-seconds N] [--run-mode step|auto] [--tracks a,b,c] [--dry-run]
   genre_apply.py --list
 
 やること:
   - 00-concept.params に genre / target_seconds / tracks(トラック計画と音色パッチ ID)を書く
+  - --tracks <名前,...> で、ユーザーが選んだ伴奏トラックだけに絞る(ジャンル定義はそのための候補。ボーカル・歌詞は絞らない)
   - ジャンルのトラック spec を作る(無ければ docs/templates/track-spec.md から)。使わない draft の
     トラック spec は削除する。各トラック spec の params.patch を設定する
   - 曲の長さをテンポ候補ごとの小節数に換算して表示する
@@ -57,6 +58,7 @@ def main() -> None:
     ap.add_argument("genre", nargs="?")
     ap.add_argument("--length-seconds", type=float)
     ap.add_argument("--run-mode", choices=["step", "auto"])
+    ap.add_argument("--tracks", help="作る伴奏トラック名(カンマ区切り。ユーザーの選択。省略時は計画のすべて)")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -77,6 +79,14 @@ def main() -> None:
     if n_acc < MIN_TRACKS:
         print(f"[エラー] 伴奏トラックが {n_acc} 本です(ボーカル・歌詞を除き {MIN_TRACKS} 本以上必要)。ジャンル定義の tracks を足してください")
         sys.exit(2)
+    if a.tracks:
+        chosen = [x.strip() for x in a.tracks.split(",") if x.strip()]
+        known = {t["track"] for t in tracks if t.get("track") and t["track"] != "vocal"}
+        unknown = [x for x in chosen if x not in known]
+        if unknown or not chosen:
+            print(f"[エラー] 選んだトラックがジャンル定義の候補にありません: {unknown or '(空)'}。候補: {', '.join(sorted(known))}")
+            sys.exit(2)
+        tracks = [t for t in tracks if not t.get("track") or t["track"] == "vocal" or t["track"] in chosen]
     tempo = prof.get("tempo", {})
     lengths = prof.get("length_seconds", {})
     seconds = a.length_seconds or lengths.get("default")
