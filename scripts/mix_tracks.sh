@@ -14,11 +14,12 @@ D="$(song_dir "$SONG")"
 case "$STEP" in *[!0-9]*) die "step は数字のみ: '$STEP'" ;; esac
 command -v ffmpeg >/dev/null || die "ffmpeg がありません"
 
-INPUTS=(); GAINS=(); PANS=(); LUFS=""
+INPUTS=(); GAINS=(); PANS=(); LUFS=""; FADE_IN=""
 while IFS=$'\t' read -r kind a b c; do
   case "$kind" in
     T) INPUTS+=("$a"); GAINS+=("$b"); PANS+=("$c") ;;
     L) LUFS="$a" ;;
+    F) FADE_IN="$a" ;;
   esac
 done < <(
   python3 - "$D" "$@" <<'PY'
@@ -40,7 +41,7 @@ for f in sorted((d / "stems").glob("*_v*.wav")):
     if track not in found or ver > found[track][1]:
         found[track] = (num, ver, f)
 # 09-mix が ready のときだけ、音量(levels_db)・パン(pan)・目標ラウドネスを反映する
-levels, pans, lufs = {}, {}, None
+levels, pans, lufs, fade_in = {}, {}, None, None
 spec = d / "spec" / "09-mix.md"
 if spec.exists():
     import yaml
@@ -49,10 +50,13 @@ if spec.exists():
     if meta.get("status") == "ready":
         p = meta.get("params") or {}
         levels, pans, lufs = p.get("levels_db") or {}, p.get("pan") or {}, p.get("loudness_lufs")
+        fade_in = p.get("fade_in_sec")
 for track, (num, ver, f) in sorted(found.items(), key=lambda kv: kv[1][0]):
     print(f"T\t{f}\t{float(levels.get(track, 0))}\t{float(pans.get(track, 0))}")
 if lufs is not None:
     print(f"L\t{float(lufs)}")
+if fade_in:
+    print(f"F\t{float(fade_in)}")
 PY
 )
 [ "${#INPUTS[@]}" -gt 0 ] || die "stems/ にトラックがありません(render_track.sh で作成)"
@@ -78,6 +82,8 @@ if [ -n "$LUFS" ] || [ "$(printf '%s\n' "${GAINS[@]}" "${PANS[@]}" | grep -vc '^
   FILTER="${FILTER}${LABELS}amix=inputs=${#INPUTS[@]}:normalize=0"
   [ -z "$LUFS" ] || FILTER="${FILTER},loudnorm=I=${LUFS}:TP=-1:LRA=11,aresample=48000"
   FILTER="${FILTER},alimiter=limit=0.95"
+  # 導入の唐突さを避ける(loudnorm が静かな導入を持ち上げるため、最後にフェードインを掛ける)
+  [ -z "$FADE_IN" ] || FILTER="${FILTER},afade=t=in:d=${FADE_IN}"
   echo "09-mix の設定を反映: 音量(dB)=${GAINS[*]} / パン=${PANS[*]} / 目標ラウドネス=${LUFS:-なし} LUFS"
 else
   FILTER="amix=inputs=${#INPUTS[@]}:normalize=0,alimiter=limit=0.95"

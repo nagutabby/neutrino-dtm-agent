@@ -22,3 +22,9 @@
 
 ## 限界
 数値は耳の代わりにならない。9・10 は自動で測れないので、聴きどころ(何秒付近)を添えてユーザーに確認する。
+
+## 直す手段(spec のパラメータ)
+- 区間ごとの出番: 各トラック spec の `params.sections`(例 `[loop-c]`)。
+- ベロシティの抑揚: `params.accent`(`downbeat` / `offbeat` / `phrase_arc`)。`scripts/apply_accent.py` が MIDI 生成時に適用する(MIDI を直接直さない)。
+- 導入の唐突さ: `09-mix` の `fade_in_sec`。ラウドネス正規化(loudnorm)が静かな導入を持ち上げるため、音源側でなくミックスで直す。
+- 音量・パン: `09-mix` の `levels_db` / `pan`。
