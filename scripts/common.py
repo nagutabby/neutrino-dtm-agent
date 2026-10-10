@@ -44,6 +44,16 @@ def require_project(song: str) -> Path:
     return p
 
 
+def reject_foreign_project(path: str | Path, song: str) -> None:
+    """入力ファイルが別の曲の projects/<other>/ 配下なら拒否(曲の取り違え防止)。"""
+    rp = Path(path).resolve()
+    root = PROJECTS.resolve()
+    if rp.is_relative_to(root):
+        owner = rp.relative_to(root).parts[0] if len(rp.relative_to(root).parts) > 1 else ""
+        if owner and owner != song:
+            sys.exit(f"別の曲のファイルです: {path}(projects/{owner}/)。対象は '{song}' です。曲を取り違えていませんか")
+
+
 def note_to_midi(name: str | int) -> int:
     """'C2' -> 36(C4=60)。数値はそのまま返す。"""
     if isinstance(name, int):

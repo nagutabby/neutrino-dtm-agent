@@ -19,3 +19,5 @@ spec 立案 → 承認 → 生成(approved のみ) → 検証 → 提示(単体+
 トラックの番号は spec の番号(03 drums / 04 bass / 05 chords / 06 melody / 08 vocal)。
 
 複数曲: 曲ごとに `projects/<song>/` を分ける。スクリプトは常に `<song>` を引数に取り、他の曲のファイルには触れない。曲の複製は `cp -r` でなく新規作成+spec の再承認で行う(承認状態を引き継がない)。
+
+スクリプト側のガード: ファイル名引数(トラック名・basename・モデル名)に `/` や `..` は使えない。`mix_tracks.sh` の step は数字のみ。`register_track.py` は別の曲の `projects/<other>/` 配下の MIDI を拒否する。

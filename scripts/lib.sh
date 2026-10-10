@@ -29,3 +29,10 @@ song_dir() {
   [ -d "$ROOT/projects/$1" ] || die "プロジェクトがありません: projects/$1(scripts/new_song.sh $1)"
   echo "$ROOT/projects/$1"
 }
+
+# ファイル名引数の検査(他の曲・親ディレクトリへ逃げる '/' や '..' を拒否)
+safe_name() {
+  case "$2" in
+    ''|*/*|*..*|.*) die "$1 に '/' や '..' は使えません(曲の外を指せません): '$2'" ;;
+  esac
+}

@@ -10,6 +10,7 @@ SONG="${1:-}"; STEP="${2:-}"
 [ -n "$SONG" ] && [ -n "$STEP" ] || die "使い方: mix_tracks.sh <song> <step> [--dry-run]"
 [ "${3:-}" = "--dry-run" ] && DRY_RUN=1
 D="$(song_dir "$SONG")"
+case "$STEP" in *[!0-9]*) die "step は数字のみ: '$STEP'" ;; esac
 [ -f "$D/approved.json" ] || die "approved.json がありません。承認済みトラックがないためミックスできません"
 command -v ffmpeg >/dev/null || die "ffmpeg がありません"
 

@@ -11,9 +11,11 @@ SONG="${1:-}"; BASE="${2:-}"; VARIANTS="${3:-}"
 EXTRA=()
 [ "${4:-}" = "--dry-run" ] && EXTRA=(--dry-run)
 D="$(song_dir "$SONG")"
+safe_name "basename" "$BASE"
 for v in $VARIANTS; do
   IFS=: read -r model k f <<<"$v"
   [ -n "$model" ] && [ -n "${k:-}" ] && [ -n "${f:-}" ] || die "形式は model:styleShift:transpose です: $v"
+  safe_name "model" "$model"
   name="${BASE}__${model}_k${k}_f${f}"
   if [ "${EXTRA[0]:-}" != "--dry-run" ]; then
     cp -n "$D/musicxml/$BASE.musicxml" "$D/musicxml/$name.musicxml"

@@ -13,7 +13,14 @@ import argparse
 import json
 import shutil
 
-from common import SPECS, load_specs, require_project, track_files, version_of
+from common import (
+    SPECS,
+    load_specs,
+    reject_foreign_project,
+    require_project,
+    track_files,
+    version_of,
+)
 
 
 def main() -> None:
@@ -25,6 +32,7 @@ def main() -> None:
     a = ap.parse_args()
 
     proj = require_project(a.song)
+    reject_foreign_project(a.midi, a.song)
     specs = load_specs(a.song)
     track = SPECS[a.spec][2]
     needed = [a.spec, *SPECS[a.spec][1]]

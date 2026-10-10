@@ -9,6 +9,7 @@ SONG="${1:-}"; NAME="${2:-}"
 [ -n "$SONG" ] && [ -n "$NAME" ] || die "使い方: render_track.sh <song> <name> [--dry-run]"
 [ "${3:-}" = "--dry-run" ] && DRY_RUN=1
 D="$(song_dir "$SONG")"
+safe_name "トラック名" "$NAME"
 [ -f "$D/tracks/$NAME.mid" ] || die "見つかりません: projects/$SONG/tracks/$NAME.mid"
 [ -n "${SOUNDFONT:-}" ] && [ -f "$SOUNDFONT" ] || die "SOUNDFONT が未設定です(.env)"
 command -v fluidsynth >/dev/null || die "fluidsynth がありません(brew install fluid-synth)"

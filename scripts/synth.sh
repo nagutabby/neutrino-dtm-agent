@@ -12,6 +12,8 @@ if [ -z "$SONG" ] || [ -z "$BASE" ]; then die "使い方: synth.sh <song> <basen
 for a in "$@"; do [ "$a" = "--dry-run" ] && DRY_RUN=1; done
 [ "$MODEL" = "--dry-run" ] && MODEL=MERROW
 D="$(song_dir "$SONG")"
+safe_name "basename" "$BASE"
+safe_name "モデル名" "$MODEL"
 
 XML="$D/musicxml/$BASE.musicxml"
 [ -f "$XML" ] || die "MusicXML がありません: ${XML#"$ROOT"/}"

@@ -70,3 +70,17 @@ def test_note_names():
     assert common.note_to_midi("C4") == 60
     assert common.note_to_midi("C1") == 24
     assert common.midi_to_note(36) == "C2"
+
+
+def test_register_rejects_midi_from_other_song(song, tmp_path):
+    import pytest
+    import register_track
+
+    other = tmp_path / "other" / "tracks"
+    other.mkdir(parents=True)
+    make_midi(other / "x.mid", [(0, 1, 36, 90)])
+    with pytest.raises(SystemExit, match="別の曲"):
+        import sys
+
+        sys.argv = ["register_track.py", "demo", "03-drums", str(other / "x.mid")]
+        register_track.main()
