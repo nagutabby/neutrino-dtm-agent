@@ -23,7 +23,7 @@ scripts/new_song.sh mysong                # projects/mysong/ と spec 雛形を�
 uv run scripts/spec_status.py mysong      # 次に決められる要素
 uv run scripts/spec_check.py mysong       # spec と生成物の整合性
 ```
-以降はエージェントに「新しい曲を作りたい」と伝えると、`coach-start` から対話的に進みます。
+以降はエージェントに「新しい曲を作りたい」と伝えるか、`/new-song [曲名]` を実行すると、`coach-start` から対話的に進みます。
 
 ## 開発
 `uv run ruff check .` / `uv run pytest` / `shellcheck scripts/*.sh`

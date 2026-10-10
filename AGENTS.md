@@ -64,6 +64,10 @@
 - トークン・鍵の値をファイル・ログ・出力に書かない。
 - AWS 基盤を扱う場合は AWS CDK を使い、`cdk synth` と `cdk diff` を確認してから `cdk deploy` する(本リポジトリは通常 AWS を使わない)。
 
+## コマンド(`.claude/commands/`)
+
+`/new-song [曲名]`: 環境確認 → 3問ヒアリング → `projects/<song>/` 作成 → concept 承認 まで進める開始コマンド。
+
 ## スキル(`.claude/skills/`)
 
 `coach-start` / `coach-explain` / `coach-review` / `spec-propose` / `spec-revise` / `spec-regenerate` / `layer-track` / `explain-technique`
