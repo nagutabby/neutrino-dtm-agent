@@ -1,0 +1,25 @@
+[project]
+name = "neutrino-dtm-agent"
+version = "0.1.0"
+description = "NEUTRINO を使った DTM を、スペック駆動で初心者を支援する AI エージェント用リポジトリ"
+requires-python = ">=3.11"
+dependencies = [
+  "mido>=1.3",
+  "pyyaml>=6",
+  "lxml>=5",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # 日本語メッセージは幅が広いため行長は検査しない
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]

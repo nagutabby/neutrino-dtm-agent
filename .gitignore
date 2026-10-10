@@ -1,0 +1,21 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# NEUTRINO 本体・モデル(再配布不可)
+NEUTRINO/
+bin/
+model/
+*.bin
+
+# 生成音声・中間データ(容量大・既定では追跡しない)
+projects/*/output/
+projects/*/stems/
+projects/*/mix/
+*.wav
+*.f0
+*.melspec
+!tests/fixtures/**/*.wav

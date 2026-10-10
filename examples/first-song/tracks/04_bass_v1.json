@@ -1,0 +1,8 @@
+{
+  "spec": "04-bass",
+  "spec_versions": {
+    "04-bass": 1,
+    "01-structure": 1,
+    "02-harmony": 1
+  }
+}
