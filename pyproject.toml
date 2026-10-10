@@ -16,7 +16,7 @@ reference = [
     "demucs>=4.1.0",
     "librosa>=0.11.0",
     "onnxruntime>=1.31.0",
-    "setuptools<81",
+    "setuptools",
     "soundfile>=0.14.0",
 ]
 
@@ -34,4 +34,5 @@ pythonpath = ["scripts"]
 
 [tool.uv]
 # basic-pitch は macOS で tensorflow-macos を要求するが cp312 wheel が無い。ONNX 推論を使うので除外する。
-override-dependencies = ["tensorflow-macos; sys_platform == 'never'", "tensorflow; sys_platform == 'never'"]
+# resampy>=0.4.3 は pkg_resources 非依存(basic-pitch は <0.4.3 と制限しているが、最新 setuptools で動くよう上書き)。
+override-dependencies = ["resampy>=0.4.3", "tensorflow-macos; sys_platform == 'never'", "tensorflow; sys_platform == 'never'"]
