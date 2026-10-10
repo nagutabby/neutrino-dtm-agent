@@ -7,7 +7,6 @@ if [ -f "$ROOT/.env" ]; then
   . "$ROOT/.env"
   set +a
 fi
-NEUTRINO_DIR="${NEUTRINO_DIR:-$HOME/NEUTRINO}"
 DRY_RUN="${DRY_RUN:-0}"
 
 die() { echo "[エラー] $*" >&2; exit 1; }

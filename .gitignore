@@ -5,26 +5,8 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 
-# NEUTRINO 本体・モデル(再配布不可)
-NEUTRINO/
-bin/
-model/
-*.bin
-
-# 曲のプロジェクト(spec・MIDI・notes.md を含め丸ごと追跡しない。ディレクトリ自体は .gitkeep で残す)
+# 曲のプロジェクト(コード・提案・録音を含め丸ごと追跡しない。ディレクトリ自体は .gitkeep で残す)
 projects/*
 !projects/.gitkeep
 
-# 生成音声・中間データ(容量大・既定では追跡しない)
-projects/*/output/
-projects/*/stems/
-projects/*/audition/
-projects/*/mix/
 *.wav
-
-# 参考曲(私的分析用。音声・書き起こし・分析結果・出典を含め丸ごと追跡しない)
-projects/*/reference/
-*.f0
-*.melspec
-!tests/fixtures/**/*.wav
-

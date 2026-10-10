@@ -12,6 +12,7 @@ wav の録音は record()。Sonic Pi にはゼロから wav を書く非リア�
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import signal
@@ -20,7 +21,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import patches
 from common import ROOT, load_dotenv
 
 load_dotenv()
@@ -28,7 +28,15 @@ load_dotenv()
 APP = Path(os.environ.get("SONIC_PI_APP", "/Applications/Sonic Pi.app"))
 RECORD_RB = ROOT / "scripts" / "sonicpi_record.rb"
 INFO_RB = ROOT / "scripts" / "sonicpi_info.rb"
+INFO_PATH = ROOT / "config" / "sonicpi_synths.json"
 BOOT_OVERHEAD = 20  # 起動・保存の待ち時間の目安(秒)。タイムアウト計算用
+
+
+def info() -> dict:
+    """Sonic Pi 内蔵シンセ・FX の {synths: {名前: [引数]}, fx: {...}}。"""
+    if not INFO_PATH.is_file():
+        sys.exit("[エラー] config/sonicpi_synths.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)")
+    return json.loads(INFO_PATH.read_text(encoding="utf-8"))
 
 
 def find_app() -> Path | None:
@@ -83,13 +91,13 @@ def cmd_dump_info() -> int:
     if r.returncode != 0 or not r.stdout.strip():
         print(r.stderr or "[エラー] 取得できませんでした", file=sys.stderr)
         return 1
-    patches.INFO_PATH.write_text(r.stdout, encoding="utf-8")
-    print(f"更新: {patches.INFO_PATH.relative_to(ROOT)}")
+    INFO_PATH.write_text(r.stdout, encoding="utf-8")
+    print(f"更新: {INFO_PATH.relative_to(ROOT)}")
     return 0
 
 
 def cmd_list(kind: str, name: str | None) -> int:
-    d = patches.info()[kind]
+    d = info()[kind]
     if name:
         if name not in d:
             print(f"[エラー] {kind} に '{name}' はありません", file=sys.stderr)

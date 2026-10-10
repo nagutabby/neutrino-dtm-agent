@@ -1,38 +1,34 @@
-# neutrino-dtm-agent
+# sonicpi-live-agent
 
-[NEUTRINO](https://studio-neutrino.com)(AI 歌声合成)で DTM を行う**初心者の学習を支援する AI エージェント用リポジトリ**です。
-AI が曲を作り切るのではなく、**スペック駆動**で「決める(ユーザー)→作る(AI)→聴く→気になる点を spec に反映→作り直す」を繰り返し、
-トラックを1本ずつ重ねながら「なぜそう聞こえるか」を学びます。
+[Sonic Pi](https://sonic-pi.net) でライブコーディングして曲を作る人を支援する **AI エージェント用リポジトリ**です。
+ユーザーがプロジェクトを始めてコードを書き、エージェントが
+
+1. **現在の音を改善**する小さな案を出し、
+2. **次の音(ステム)**をコードで提示し、
+3. 最後に**全体レビュー**する
+
+という流れで、「なぜそう聞こえるか」を理論と数値で学べます。決めるのは常にユーザーです。
 
 - エージェント向けルール: [AGENTS.md](AGENTS.md)(`CLAUDE.md` から参照)
-- 進め方: [docs/workflow.md](docs/workflow.md) / [docs/spec-driven.md](docs/spec-driven.md) / [docs/learning-path.md](docs/learning-path.md)
-- CLI MIDI ソフト候補: [docs/midi-cli-tools.md](docs/midi-cli-tools.md)
-- **ライセンス上の注意**: [docs/licensing.md](docs/licensing.md)(NEUTRINO 本体・モデルは含みません。出力や中間データの AI/ML 学習利用は禁止されています)
+- 技法メモ: [docs/live-coding.md](docs/live-coding.md) / [docs/music-theory.md](docs/music-theory.md) / [docs/workflow.md](docs/workflow.md)
 
 ## セットアップ
 ```sh
-brew install uv ffmpeg fluid-synth      # MuseScore 4 は別途(brew install --cask musescore)
-cp .env.example .env                    # NEUTRINO_DIR / MUSESCORE_BIN を設定(シンセ合成に Sonic Pi が必要: brew install --cask sonic-pi)
+brew install uv ffmpeg mpv ruby
+brew install --cask sonic-pi
 uv sync
-scripts/setup.sh                        # 不足の確認
+scripts/setup.sh        # 不足の確認
 ```
 
-## 使い方(例)
+## 使い方
 ```sh
-scripts/new_song.sh                       # projects/<日付-連番>/ と spec 雛形を自動作成
-uv run scripts/spec_status.py mysong      # 次に決められる要素
-uv run scripts/spec_check.py mysong       # spec と生成物の整合性
+scripts/new_session.sh                                   # projects/<日付-連番>/ を作成
+# Sonic Pi のコードを projects/<song>/current.rb に保存し、エージェントに伝える(/new-song)
+uv run scripts/live_check.py projects/<song>/current.rb  # 名前・sleep の簡易検査
+uv run scripts/live_render.py <song> current.rb --seconds 16   # 実時間で録音(音が鳴ります)
+uv run scripts/wav_stats.py projects/<song>/renders/current_v1.wav
+scripts/play.sh projects/<song>/renders/current_v1.wav   # 試聴
 ```
-以降はエージェントに「新しい曲を作りたい」と伝えるか、`/new-song [曲名]` を実行すると、`coach-start` から対話的に進みます。
 
 ## 開発
 `uv run ruff check .` / `uv run pytest` / `shellcheck scripts/*.sh`
-
-## 免責
-NEUTRINO は STUDIO NEUTRINO の製品です。本リポジトリは非公式の補助ツールです。
-
-## 聴く
-`scripts/play.sh <path>`(`projects/` 配下の wav / mp3 / MIDI。`--list <曲名>` で一覧)。mpv が必要: `brew install mpv`。
-
-## 参考曲から雰囲気をつかむ
-`/reference <曲名> <YouTube URL>` で参考曲を音源分離して分析し(MIDI への書き起こし・検索はしません)、ユーザーが挙げた**最低3曲**の共通点(テンポ・キー・コード機能など)を few-shot の例にして曲のイメージを言葉にします。詳細と注意は `docs/reference-analysis.md`。

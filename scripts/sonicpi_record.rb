@@ -1,5 +1,6 @@
 # Sonic Pi のコードをヘッドレスで実行し、鳴った音を wav に録音する(リアルタイム録音)。
 #   ruby sonicpi_record.rb OUT.wav SECONDS CODE.rb
+# CODE.rb 自身が SECONDS 秒ぶん sleep して終わること(ラッパーは録音の開始と停止・保存だけを足す。SECONDS は待ち時間の上限計算用)
 # 同梱の headless-record.rb は Sonic Pi 5.0.0 ではエンジンが TCP になっていて動かないため、
 # Sonic Pi 自身の recording_start / recording_save を使う。音は実際に再生されながら録音される。
 require "fileutils"
@@ -17,8 +18,7 @@ boot = SonicPi::HeadlessBoot.new.boot!
 code = [
   "set_sched_ahead_time! 0", # 録音の頭と音の頭を揃える(既定の 0.5 秒先行だと音が遅れる)
   "recording_start",
-  File.read(file),
-  "sleep #{dur}",
+  "eval_file #{File.expand_path(file).inspect}", # 長いコードは OSC 1パケットに入らないのでファイル経由
   "recording_stop",
   "sleep 0.5",
   "recording_save #{out.inspect}",
