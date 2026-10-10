@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 環境確認: uv / NEUTRINO / fluidsynth / ffmpeg / MuseScore / SoundFont
 set -u
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 ok() { echo "  ✔ $*"; }
@@ -8,9 +9,9 @@ ng() { echo "  ✘ $*"; MISSING=1; }
 MISSING=0
 
 echo "■ 環境チェック"
-command -v uv >/dev/null && ok "uv" || ng "uv(brew install uv)"
-command -v ffmpeg >/dev/null && ok "ffmpeg" || ng "ffmpeg(brew install ffmpeg)"
-command -v fluidsynth >/dev/null && ok "fluidsynth" || ng "fluidsynth(brew install fluid-synth)"
+if command -v uv >/dev/null; then ok "uv"; else ng "uv(brew install uv)"; fi
+if command -v ffmpeg >/dev/null; then ok "ffmpeg"; else ng "ffmpeg(brew install ffmpeg)"; fi
+if command -v fluidsynth >/dev/null; then ok "fluidsynth"; else ng "fluidsynth(brew install fluid-synth)"; fi
 if [ -x "$NEUTRINO_DIR/bin/neutrino" ] && [ -x "$NEUTRINO_DIR/bin/musicXMLtoLabel" ]; then
   ok "NEUTRINO: $NEUTRINO_DIR"
 elif [ -f "$NEUTRINO_DIR/bin/neutrino" ]; then
@@ -28,5 +29,5 @@ if [ -n "${SOUNDFONT:-}" ] && [ -f "$SOUNDFONT" ]; then
 else
   ng "SoundFont(.sf2)を用意して .env の SOUNDFONT に設定"
 fi
-[ "$MISSING" = 0 ] && echo "すべて揃っています。" || echo "不足があります。上の ✘ を解消してください。"
+if [ "$MISSING" = 0 ]; then echo "すべて揃っています。"; else echo "不足があります。上の ✘ を解消してください。"; fi
 exit 0

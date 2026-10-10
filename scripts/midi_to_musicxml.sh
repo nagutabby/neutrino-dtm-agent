@@ -2,6 +2,7 @@
 # 使い方: midi_to_musicxml.sh <in.mid> <out.musicxml> [--dry-run]
 # MuseScore 4 CLI で MIDI → MusicXML。歌詞は変換後に lyrics_inject.py で付与する。
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 IN="${1:-}"; OUT="${2:-}"

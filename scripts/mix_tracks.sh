@@ -3,6 +3,7 @@
 # approved.json に載っている承認済みトラックだけを ffmpeg で重ねて mix/step<step>_vN.wav を作る。
 # stems/ には <NN>_<track>_v<承認版>.wav(ボーカルは output/<song>.wav を stems/ に NN_vocal_vN.wav としてコピー)が必要。
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SONG="${1:-}"; STEP="${2:-}"

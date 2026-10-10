@@ -2,6 +2,7 @@
 # 使い方: new_song.sh <song> [--dry-run]
 # projects/<song>/ を作り、spec 雛形を展開する(既存なら何もしない)
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SONG="${1:-}"

@@ -4,10 +4,11 @@
 # 引数の既定値は NEUTRINO 同梱の Run.sh と同じ。NEUTRINO_DIR は読み取りのみで書き込まない。
 # 環境変数で上書き: NUM_THREADS STYLE_SHIFT TRANSPOSE SAMPLING_RATE BIT_DEPTH
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SONG="${1:-}"; BASE="${2:-}"; MODEL="${3:-MERROW}"
-[ -n "$SONG" ] && [ -n "$BASE" ] || die "使い方: synth.sh <song> <basename> [model] [--dry-run]"
+if [ -z "$SONG" ] || [ -z "$BASE" ]; then die "使い方: synth.sh <song> <basename> [model] [--dry-run]"; fi
 for a in "$@"; do [ "$a" = "--dry-run" ] && DRY_RUN=1; done
 [ "$MODEL" = "--dry-run" ] && MODEL=MERROW
 D="$(song_dir "$SONG")"

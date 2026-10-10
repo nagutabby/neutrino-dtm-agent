@@ -2,6 +2,7 @@
 # 使い方: render_track.sh <song> <track-midi-name 例: 04_bass_v1> [--dry-run]
 # tracks/<name>.mid を FluidSynth で stems/<name>.wav にする(試聴用)
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SONG="${1:-}"; NAME="${2:-}"

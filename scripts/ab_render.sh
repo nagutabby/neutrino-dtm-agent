@@ -3,6 +3,7 @@
 #   例: ab_render.sh demo vocal_v1 "MERROW:0:0 MERROW:2:0 NAKUMO:0:0"
 # 設定違いを別名で合成し、聴き比べ用に output/ へ並べる(耳の学習用)。
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 SONG="${1:-}"; BASE="${2:-}"; VARIANTS="${3:-}"
