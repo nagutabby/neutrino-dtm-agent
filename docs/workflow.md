@@ -17,3 +17,5 @@ spec 立案 → 承認 → 生成(approved のみ) → 検証 → 提示(単体+
 
 ディレクトリ: `spec/ tracks/ stems/ mix/ musicxml/ label/{full,mono,timing}/ output/ notes.md approved.json`
 トラックの番号は spec の番号(03 drums / 04 bass / 05 chords / 06 melody / 08 vocal)。
+
+複数曲: 曲ごとに `projects/<song>/` を分ける。スクリプトは常に `<song>` を引数に取り、他の曲のファイルには触れない。曲の複製は `cp -r` でなく新規作成+spec の再承認で行う(承認状態を引き継がない)。
