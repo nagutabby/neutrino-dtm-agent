@@ -1,1 +1,3 @@
 source-path=SCRIPTDIR
+# "[ cond ] && [ cond ] || die" は検査用の意図した書き方
+disable=SC2015
