@@ -77,7 +77,7 @@ Drums → Bass → Chords → Melody →(任意: ボーカル。ボコーダー�
 ## コマンド・スクリプト
 
 - ボーカル用: `neutrino_tune.py <base> [--preset vocoder|robot] [--pitch-lock …]`(調声。中間ファイルを編集し `<名>_tuned_vN.*` を出力)/ `neutrino_sing.py <phrase.json> [--model M]`(JSON → MusicXML → NEUTRINO で wav/f0。出力は `work/vocals/<名>_vN.*`)/ `vocode.py <wav> <f0> --bpm N [--beats 16] [--vibrato 20] [--dynamics] [--attack-beats 1] [--phrase-levels …] [--growl G]`(頭の1小節を捨てて拍数ぶん切り出し、ボコーダー wav を `_voc_vN.wav` で出力。`--vibrato` は音高の揺れ、`--dynamics` は声の強弱、`--attack-beats` は音符ごとの立ち上がり、`--growl` は唸り(ノイズが増えるので既定オフ))
-- `live_render.py <files…> --seconds N` / `live_check.py <file.rb>` / `wav_stats.py <wav>` / `sonicpi.py synths|fx [名前]` / `play.sh <wav>` / `setup.sh`。
+- `live_render.py <files…> --seconds N` / `live_check.py <file.rb>` / `wav_stats.py <wav>` / `wav_to_mp3.py <wav> [-o out.mp3] [--bitrate 256k] [--force]` / `sonicpi.py synths|fx [名前]` / `play.sh <wav>` / `setup.sh`。
 
 ## スキル(`.claude/skills/`)
 
