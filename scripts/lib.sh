@@ -19,19 +19,3 @@ run() {
     "$@"
   fi
 }
-
-# song 名の検査と作業ディレクトリ
-song_dir() {
-  case "$1" in
-    ''|*[!A-Za-z0-9_-]*) die "曲名は英数字・_・- のみ: '$1'" ;;
-  esac
-  [ -d "$ROOT/projects/$1" ] || die "プロジェクトがありません: projects/$1(scripts/new_song.sh で作成)"
-  echo "$ROOT/projects/$1"
-}
-
-# ファイル名引数の検査(他の曲・親ディレクトリへ逃げる '/' や '..' を拒否)
-safe_name() {
-  case "$2" in
-    ''|*/*|*..*|.*) die "$1 に '/' や '..' は使えません(曲の外を指せません): '$2'" ;;
-  esac
-}

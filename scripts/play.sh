@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 # 使い方:
-#   play.sh <file> [--start 秒] [--loop] [--dry-run]   projects/ 配下の音声(wav/mp3/flac/m4a)を再生
-#   play.sh --list <song>                                曲の聴けるファイルを一覧する
+#   play.sh <file> [--start 秒] [--loop] [--dry-run]   work/ 配下の音声(wav/mp3/flac/m4a)を再生
+#   play.sh --list                                       work/ の聴けるファイルを一覧する
 # 音声は mpv(ターミナル操作: スペース=一時停止、←→=5秒移動、↑↓=音量、q=終了)。
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
 if [ "${1:-}" = "--list" ]; then
-  D="$(song_dir "${2:-}")"
-  find "$D" \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.m4a' \) -type f \
+  find "$ROOT/work" \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.m4a' \) -type f \
     | sed "s|^$ROOT/||" | sort
   exit 0
 fi
 
 FILE="${1:-}"; START=""; LOOP=0
-[ -n "$FILE" ] || die "使い方: play.sh <file> [--start 秒] [--loop] [--dry-run] / play.sh --list <song>"
+[ -n "$FILE" ] || die "使い方: play.sh <file> [--start 秒] [--loop] [--dry-run] / play.sh --list"
 shift
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -27,11 +26,11 @@ while [ $# -gt 0 ]; do
 done
 case "$START" in ''|*[!0-9.]*) [ -z "$START" ] || die "--start は秒数(数字)で指定します: '$START'" ;; esac
 
-# projects/ 配下のファイルだけ再生する(曲の取り違え・任意パスの再生を防ぐ)
+# work/ 配下のファイルだけ再生する(任意パスの再生を防ぐ)
 [ -f "$FILE" ] || FILE="$ROOT/$FILE"
 [ -f "$FILE" ] || die "ファイルがありません: $FILE"
 REAL="$(cd "$(dirname "$FILE")" && pwd -P)/$(basename "$FILE")"
-case "$REAL" in "$ROOT"/projects/*) ;; *) die "projects/ 配下のファイルのみ再生できます: $REAL" ;; esac
+case "$REAL" in "$ROOT"/work/*) ;; *) die "work/ 配下のファイルのみ再生できます: $REAL" ;; esac
 
 case "$REAL" in
   *.wav|*.mp3|*.flac|*.m4a)

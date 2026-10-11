@@ -5,8 +5,8 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 
-# 曲のプロジェクト(コード・提案・録音を含め丸ごと追跡しない。ディレクトリ自体は .gitkeep で残す)
-projects/*
-!projects/.gitkeep
+# 作業ディレクトリ(コード・提案・録音を含め丸ごと追跡しない。ディレクトリ自体は .gitkeep で残す)
+work/*
+!work/.gitkeep
 
 *.wav
