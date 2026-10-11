@@ -18,3 +18,8 @@ def test_unknown_names_and_args():
 def test_live_loop_without_sleep():
     probs = live_check.check("live_loop :a do\n  play 60\nend\n", INFO)
     assert any("sleep" in p for p in probs)
+
+
+def test_live_loop_with_if_and_sleep_after_block():
+    code = "live_loop :a do\n  x = if true\n    1\n  else\n    2\n  end\n  if x == 1\n    play 60\n  end\n  sleep 1\nend\n"
+    assert live_check.check(code, INFO) == []

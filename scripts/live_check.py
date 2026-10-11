@@ -47,7 +47,11 @@ def check(text: str, info: dict) -> list[str]:
             depth, j, body = 0, i, []
             while j < len(lines):
                 code = lines[j].split("#", 1)[0]
-                depth += len(re.findall(r"\bdo\b", code)) - len(re.findall(r"\bend\b", code))
+                # do ブロックに加え、行頭の if/unless/case/while/begin と `x = if ...` も end で閉じる
+                opens = len(re.findall(r"\bdo\b", code))
+                opens += 1 if re.match(r"\s*(if|unless|case|while|until|begin)\b", code) else 0
+                opens += len(re.findall(r"=\s*(?:if|unless|case)\b", code))
+                depth += opens - len(re.findall(r"\bend\b", code))
                 body.append(code)
                 if depth <= 0 and j > i:
                     break
