@@ -35,8 +35,8 @@ scripts/play.sh work/renders/current_v1.wav              # 試聴
 ## ライセンス
 | 対象 | ライセンス |
 |---|---|
-| コード(`scripts/`、`songs/*.rb`、ドキュメントなど) | MIT([LICENSE](LICENSE)) |
-| 曲の録音(`songs/*.mp3`) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)(条文: [songs/LICENSE-CC-BY-4.0.txt](songs/LICENSE-CC-BY-4.0.txt)) |
+| コード(`scripts/`、`songs/*.rb`、ドキュメントなど) | MIT([LICENSE-MIT](LICENSE-MIT)) |
+| 曲の録音(`songs/*.mp3`) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)(条文: [LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0)) |
 
 - mp3 を使うときのクレジット表記の例: 「Dark Kawaii Future Bass (songs/73_section_v1.mp3) by nagutabby, CC BY 4.0」
 - 曲の音は、Sonic Pi の内蔵シンセ・FX と、同梱のサンプル(CC0)で鳴らしています。
