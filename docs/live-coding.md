@@ -17,7 +17,7 @@
 | 音域の住み分け | ベース C1〜C3 / コード C3〜C5 / メロ C4〜C6 | `note` は MIDI 番号(60 = C4) |
 | ボーカル風(ボコーダー) | saw を母音のフォルマント(F1/F2/F3)の `bpf` 3つに通す。子音は短い `noise`/`pnoise`。`docs/vocal-helper.rb` の `vsing` | `res` 0.85、`amp` 比 1 : 0.6 : 0.3。`ring_mod` mix 0.2〜0.4 で機械っぽさ、`reverb` mix 0.3 |
 
-確認: `uv run scripts/sonicpi.py synths [名前]` / `fx [名前]` で内蔵シンセ・FX の引数。`uv run scripts/live_check.py <file.rb>` で名前の検査。
+確認: `uv run scripts/sonicpi.py synths [名前]` / `fx [名前]` で内蔵シンセ・FX の引数、`samples [グループ]`(bass・bd・drum・elec・hat・loop・perc・sn など)で内蔵サンプル、`chords` / `scales` でコード・スケールの名前。`uv run scripts/live_check.py <file.rb>` で、これらの名前の検査(タイプミスには「もしかして」を出す)。一覧は config/sonicpi_synths.json と config/sonicpi_sounds.json(Sonic Pi を更新したら `sonicpi.py dump-info` で作り直す)。
 
 ## つまずきメモ(この曲づくりで踏んだもの)
 - `define :at` など、Sonic Pi のコア API の名前を `define` に使うと実行時エラー(`live_check.py` では検出できない)。固有の名前(`on_air`)にする。

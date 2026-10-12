@@ -3,7 +3,8 @@
 
   live_check.py <file.rb> [...]
 
-Sonic Pi の API(誤り): シンセ名(use_synth / synth)・FX 名(with_fx)が内蔵にあるか、同じ行の引数名がそのシンセ/FX の
+Sonic Pi の API(誤り): サンプル名(`sample :bd_haus`、`grid_voice :sample, :名前`)・コード名(`chord(:c3, :minor7)`、`[:f3, :minor7]`)・スケール名が
+  内蔵にあるか(config/sonicpi_sounds.json。ファイルが無ければ省く)、シンセ名(use_synth / synth)・FX 名(with_fx)が内蔵にあるか、同じ行の引数名がそのシンセ/FX の
   引数にあるか、`sleep` の無い live_loop(Sonic Pi がハングする典型。grid_play / grid_chop / grid_each / grid_roll /
   grid_ticks / grid_rest は中で sleep するので可)。
 グリッド記法(docs/live-grid.rb):
@@ -19,6 +20,7 @@ Sonic Pi の API(誤り): シンセ名(use_synth / synth)・FX 名(with_fx)が�
 
 from __future__ import annotations
 
+import difflib
 import re
 import sys
 from pathlib import Path
@@ -30,6 +32,10 @@ COMMON = {"amp", "pan", "attack", "decay", "sustain", "release", "attack_level",
 USE_SYNTH = re.compile(r"\b(?:use_synth|synth)\s+:(\w+)(.*)")
 WITH_FX = re.compile(r"\bwith_fx\s+:(\w+)(.*?)\bdo\b")
 OPT = re.compile(r"\b(\w+):\s")
+SAMPLE = re.compile(r"\bsample\s+:(\w+)|\bgrid_voice\s+:sample\s*,\s*:(\w+)")
+CHORD = re.compile(r"\bchord\(?\s*[^,()]+,\s*(?::(\w+)|['\"]([^'\"]+)['\"])")
+CHORD_PAIR = re.compile(r"\[\s*:[a-gA-G][sb#]?-?\d?\s*,\s*(?::(\w+)|['\"]([^'\"]+)['\"])\s*\]")  # [:f3, :minor7]
+SCALE = re.compile(r"\bscale\(?\s*[^,()]+,\s*:(\w+)")
 
 
 GRID_CHARS = "xXo123456789.-| "
@@ -130,6 +136,20 @@ def check(text: str, info: dict) -> list[str]:
                 for o in OPT.findall(rest + " "):
                     if o not in allowed and not o.endswith(("_slide", "_slide_shape", "_slide_curve")):
                         problems.append(f"{i}行目: :{name} に引数 {o}: はありません")
+    # サンプル・コード・スケールの名前(config/sonicpi_sounds.json があるときだけ)
+    samples = {n for names in info.get("samples", {}).values() for n in names}
+    for i, raw in enumerate(lines, 1):
+        line = strip_comment(raw)
+        for kind, rx, valid, cmd in (("サンプル", SAMPLE, samples, "samples"), ("コード", CHORD, set(info.get("chords", [])), "chords"),
+                                    ("コード", CHORD_PAIR, set(info.get("chords", [])), "chords"), ("スケール", SCALE, set(info.get("scales", [])), "scales")):
+            if not valid:
+                continue
+            for m in rx.finditer(line):
+                name = next(g for g in m.groups() if g)
+                if name not in valid:
+                    near = difflib.get_close_matches(name, valid, n=3)
+                    hint = f"もしかして: {' '.join(near)}。" if near else ""
+                    problems.append(f"{i}行目: 内蔵に無い{kind} {name}。{hint}(`sonicpi.py {cmd}` で一覧)")
     # live_loop ... do ... end に sleep / sync があるか(grid_* も中で sleep する)
     for n, body in live_loop_bodies(lines):
         if not re.search(r"\b(sleep|sync|wait|grid_play|grid_chop|grid_each|grid_roll|grid_ticks|grid_rest)\b", body):
@@ -231,7 +251,7 @@ def main() -> None:
     files = sys.argv[1:]
     if not files:
         sys.exit(__doc__)
-    info = sonicpi.info()
+    info = {**sonicpi.info(), **sonicpi.sounds()}
     worst = 0
     for f in files:
         text = Path(f).read_text(encoding="utf-8")

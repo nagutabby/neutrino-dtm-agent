@@ -3,7 +3,9 @@
 
   sonicpi.py synths [名前]    内蔵シンセの一覧(名前を渡すとその引数)
   sonicpi.py fx [名前]        内蔵 FX の一覧(名前を渡すとその引数)
-  sonicpi.py dump-info        Sonic Pi.app から config/sonicpi_synths.json を作り直す(バージョンアップ後など)
+  sonicpi.py samples [グループ]  内蔵サンプルの一覧(グループは bass / bd / drum / elec / hat / loop / perc / sn など。名前の頭の部分)
+  sonicpi.py chords | scales  chord / scale に使える名前の一覧
+  sonicpi.py dump-info        Sonic Pi.app から config/sonicpi_synths.json と config/sonicpi_sounds.json を作り直す(バージョンアップ後など)
 
 wav の録音は record()。Sonic Pi にはゼロから wav を書く非リアルタイム(NRT)の仕組みがないため、
 ヘッドレスで起動して実時間で録音する(曲の長さ分の時間がかかる。録音中は実際に音が鳴る)。
@@ -29,6 +31,7 @@ APP = Path(os.environ.get("SONIC_PI_APP", "/Applications/Sonic Pi.app"))
 RECORD_RB = ROOT / "scripts" / "sonicpi_record.rb"
 INFO_RB = ROOT / "scripts" / "sonicpi_info.rb"
 INFO_PATH = ROOT / "config" / "sonicpi_synths.json"
+SOUNDS_PATH = ROOT / "config" / "sonicpi_sounds.json"
 BOOT_OVERHEAD = 20  # 起動・保存の待ち時間の目安(秒)。タイムアウト計算用
 
 
@@ -37,6 +40,13 @@ def info() -> dict:
     if not INFO_PATH.is_file():
         sys.exit("[エラー] config/sonicpi_synths.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)")
     return json.loads(INFO_PATH.read_text(encoding="utf-8"))
+
+
+def sounds() -> dict:
+    """Sonic Pi 内蔵の {samples: {グループ: [名前]}, chords: [名前], scales: [名前]}。ファイルが無ければ空(検査を省く)。"""
+    if not SOUNDS_PATH.is_file():
+        return {}
+    return json.loads(SOUNDS_PATH.read_text(encoding="utf-8"))
 
 
 def find_app() -> Path | None:
@@ -87,12 +97,13 @@ def cmd_dump_info() -> int:
     if not (find_app() and ruby):
         print("[エラー] Sonic Pi と ruby が必要です", file=sys.stderr)
         return 1
-    r = subprocess.run([ruby, str(INFO_RB)], capture_output=True, text=True, env={**os.environ, "SONIC_PI_APP": str(APP)})
-    if r.returncode != 0 or not r.stdout.strip():
-        print(r.stderr or "[エラー] 取得できませんでした", file=sys.stderr)
-        return 1
-    INFO_PATH.write_text(r.stdout, encoding="utf-8")
-    print(f"更新: {INFO_PATH.relative_to(ROOT)}")
+    for args, path in (([], INFO_PATH), (["sounds"], SOUNDS_PATH)):
+        r = subprocess.run([ruby, str(INFO_RB), *args], capture_output=True, text=True, env={**os.environ, "SONIC_PI_APP": str(APP)})
+        if r.returncode != 0 or not r.stdout.strip():
+            print(r.stderr or "[エラー] 取得できませんでした", file=sys.stderr)
+            return 1
+        path.write_text(r.stdout, encoding="utf-8")
+        print(f"更新: {path.relative_to(ROOT)}")
     return 0
 
 
@@ -108,14 +119,36 @@ def cmd_list(kind: str, name: str | None) -> int:
     return 0
 
 
+def cmd_sounds(kind: str, name: str | None) -> int:
+    d = sounds()
+    if not d:
+        print("[エラー] config/sonicpi_sounds.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)", file=sys.stderr)
+        return 1
+    if kind != "samples":
+        print(" ".join(d[kind]))
+    elif name:
+        if name not in d["samples"]:
+            print(f"[エラー] グループ '{name}' はありません(あるグループ: {' '.join(d['samples'])})", file=sys.stderr)
+            return 2
+        print(" ".join(d["samples"][name]))
+    else:
+        print("\n".join(f"{g}: {len(v)} 個 ({' '.join(v[:3])} …)" for g, v in d["samples"].items()))
+    return 0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     for k in ("synths", "fx"):
         sub.add_parser(k).add_argument("name", nargs="?")
+    sub.add_parser("samples").add_argument("name", nargs="?")
+    sub.add_parser("chords")
+    sub.add_parser("scales")
     sub.add_parser("dump-info")
     a = ap.parse_args()
-    sys.exit(cmd_dump_info() if a.cmd == "dump-info" else cmd_list(a.cmd, a.name))
+    if a.cmd == "dump-info":
+        sys.exit(cmd_dump_info())
+    sys.exit(cmd_sounds(a.cmd, getattr(a, "name", None)) if a.cmd in ("samples", "chords", "scales") else cmd_list(a.cmd, a.name))
 
 
 if __name__ == "__main__":
