@@ -39,4 +39,4 @@ scripts/play.sh work/renders/current_v1.wav              # 試聴
 | 対象 | ライセンス |
 |---|---|
 | コード(`scripts/`、`songs/*.rb`、ドキュメントなど) | MIT([LICENSE-MIT](LICENSE-MIT)) |
-| 曲の録音(`songs/*.mp3`) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)([LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0)) |
+| 曲の録音(`songs/*.mp3`) | CC BY 4.0([LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0)) |
