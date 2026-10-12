@@ -10,8 +10,8 @@ chop_a  = "x--- x--- X--- x-o-"          # 1小節。音は5つ(x x X x o)
 
 # --- 音(何を鳴らすか)---
 kick = grid_voice :sample, :bd_haus, amp: 1.5
-bass = grid_voice :synth, :subpulse, release: 0.3, amp: 1.0
-pad  = grid_voice :synth, :supersaw, cutoff: 100, release: 0.3, amp: 0.6
+bass = grid_voice :synth, :subpulse, attack: :instant, release: :mid, amp: 1.0
+pad  = grid_voice :synth, :supersaw, cutoff: 100, env: :stab, amp: 0.6          # 急に立ち上がって短く切る(Future Bass のシンセ)
 
 # --- 進行(1小節に1コード)---
 verse_p = grid_prog [:f3, :minor7], [:db3, :major7], [:ab2, :major7], [:eb3, :major7]

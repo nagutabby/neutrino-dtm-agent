@@ -105,3 +105,26 @@ def test_invalid_or_conflicting_settings():
     assert any("正の整数" in m for m in e)
     _, w = cg.check("use_bpm 100\ngrid_meter 3\ngrid_meter 4\n")
     assert any("grid_meter が複数" in m for m in w)
+
+
+def test_digit_levels_are_hits_but_digit_only_strings_are_not_grids():
+    assert cg.hit_beats("9363 9363 9363 ....") == [0.25] * 12
+    assert cg.check('use_bpm 100\nid = "12345678"\n') == ([], [])
+    e, _ = cg.check('use_bpm 100\nx = "9363 9363 9."\n')
+    assert any("10 マス" in m for m in e)
+
+
+def test_chop_from_same_is_not_counted():
+    text = 'use_bpm 100\nv = grid_clip "a.wav", 16\nlive_loop :v do\n  grid_chop v, "X--x --9- ..X- -7--", from: :same, base: 4\nend\n'
+    assert cg.check(text) == ([], [])
+
+
+def test_envelope_words_are_checked_on_grid_voice_and_chop():
+    ok = 'use_bpm 100\nlead = grid_voice :synth, :supersaw, env: :stab, release: :long, attack: :instant\n'
+    assert cg.check(ok) == ([], [])
+    e, _ = cg.check('use_bpm 100\nlead = grid_voice :synth, :saw, attack: :quick\n')
+    assert any("attack: :quick" in m for m in e)
+    e, _ = cg.check('use_bpm 100\npad = grid_voice :synth, :saw, env: :soft\n')
+    assert any("env: :soft" in m for m in e)
+    e, _ = cg.check('use_bpm 100\nlive_loop :v do\n  grid_chop v, "X... X...", release: :huge\nend\n')
+    assert any("release: :huge" in m for m in e)

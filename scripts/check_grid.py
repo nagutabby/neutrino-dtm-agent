@@ -4,7 +4,7 @@
   check_grid.py <file.rb> [...]
 
 見るもの(正規表現による検査なので、見落とし・誤検出がありうる):
-  誤り: グリッド文字列のマス数が 1小節のマス数の倍数でない(grid_res × grid_meter。既定 4 × 4 = 16)/ grid_res・grid_meter が正の整数でない / grid_chop の `from:` の個数が音の数と違う /
+  誤り: 立ち上がり・立ち下がりの言葉(attack: / release: / env:)が知らない言葉 / グリッド文字列のマス数が 1小節のマス数の倍数でない(grid_res × grid_meter。既定 4 × 4 = 16)/ grid_res・grid_meter が正の整数でない / grid_chop の `from:` の個数が音の数と違う /
         `from:` が元の wav(grid_clip の拍数)をはみ出す
   警告: `define` の名前が grid_ で始まらない / live_loop に grid_play・grid_chop と `sleep` が両方ある(二重に待つ) /
         grid_res・grid_meter が複数の値で書かれている(1曲で1つに固定)/ use_bpm が無い・複数ある / 演算(.mask .shift .accent .bar、グリッド文字列の `+`)の使用(必要なときだけ使う規約)
@@ -18,10 +18,16 @@ import re
 import sys
 from pathlib import Path
 
-GRID_CHARS = "xXo.-| "
-HITS = "xXo"
+GRID_CHARS = "xXo123456789.-| "
+HITS = "xXo123456789"
+SYMBOLS = "xXo.-"  # 数字だけの文字列をグリッドと間違えないための目印
 DEFAULT_RES = 4  # 1拍あたりのマス数(4 = 16分音符)
 DEFAULT_METER = 4  # 1小節の拍数(4/4)
+ATTACKS = {"instant", "fast", "mid", "slow"}
+RELEASES = {"cut", "short", "mid", "long"}
+ENVS = {"pluck", "stab", "pad", "swell"}
+ENV_WORDS = {"attack": ATTACKS, "release": RELEASES, "env": ENVS}
+WORD = re.compile(r"\b(attack|release|env):\s*:(\w+)")
 SETTING = re.compile(r"^\s*grid_(res|meter)\s+(\S+)", re.M)
 STRING = re.compile(r'"([^"\\\n]*)"')
 GRID_PLAY_OR_CHOP = re.compile(r"\bgrid_(?:play|chop)\b")
@@ -43,9 +49,15 @@ def strip_comment(line: str) -> str:
 
 
 def is_grid(s: str) -> bool:
-    """グリッド文字列らしいか: 使える文字だけで、音符(x X o)を含み、6マス以上。"""
+    """グリッド文字列らしいか: 使える文字だけで、音符(x X o 1〜9)と記号(x X o . -)を含み、6マス以上。"""
     cells = cells_of(s)
-    return bool(s) and all(c in GRID_CHARS for c in s) and len(cells) >= 6 and any(c in HITS for c in cells)
+    return (
+        bool(s)
+        and all(c in GRID_CHARS for c in s)
+        and len(cells) >= 6
+        and any(c in HITS for c in cells)
+        and any(c in SYMBOLS for c in cells)
+    )
 
 
 def cells_of(pattern: str) -> str:
@@ -138,6 +150,15 @@ def check(text: str) -> tuple[list[str], list[str]]:
             if f < 0 or (total is not None and f + ln > total + 1e-9):
                 limit = f"元の長さ {total:g} 拍" if total is not None else "0 以上"
                 errors.append(f"{n}行目: grid_chop の {k} 番目の音 from: {f:g}(長さ {ln:g} 拍)が {limit} をはみ出す")
+
+    # 2b. 立ち上がり・立ち下がりの言葉(attack: / release: / env:)
+    for n, line in enumerate(code_lines, 1):
+        if "grid_voice" not in line and "grid_chop" not in line:
+            continue
+        for m in WORD.finditer(line):
+            if m.group(2) not in ENV_WORDS[m.group(1)]:
+                known = " ".join(sorted(ENV_WORDS[m.group(1)]))
+                errors.append(f"{n}行目: {m.group(1)}: :{m.group(2)} は知らない言葉です({known})")
 
     # 3. define の名前
     for n, line in enumerate(code_lines, 1):
