@@ -4,10 +4,10 @@
   check_grid.py <file.rb> [...]
 
 見るもの(正規表現による検査なので、見落とし・誤検出がありうる):
-  誤り: グリッド文字列のマス数が 16 の倍数でない(1小節 = 16マス)/ grid_chop の `from:` の個数が音の数と違う /
+  誤り: グリッド文字列のマス数が 1小節のマス数の倍数でない(grid_res × grid_meter。既定 4 × 4 = 16)/ grid_res・grid_meter が正の整数でない / grid_chop の `from:` の個数が音の数と違う /
         `from:` が元の wav(grid_clip の拍数)をはみ出す
   警告: `define` の名前が grid_ で始まらない / live_loop に grid_play・grid_chop と `sleep` が両方ある(二重に待つ) /
-        use_bpm が無い・複数ある / 演算(.mask .shift .accent .bar、グリッド文字列の `+`)の使用(必要なときだけ使う規約)
+        grid_res・grid_meter が複数の値で書かれている(1曲で1つに固定)/ use_bpm が無い・複数ある / 演算(.mask .shift .accent .bar、グリッド文字列の `+`)の使用(必要なときだけ使う規約)
 
 終了コード: 0 = 問題なし、1 = 警告のみ、2 = 誤り。
 """
@@ -20,7 +20,9 @@ from pathlib import Path
 
 GRID_CHARS = "xXo.-| "
 HITS = "xXo"
-STEP = 0.25  # 1マス = 16分音符 = 0.25拍
+DEFAULT_RES = 4  # 1拍あたりのマス数(4 = 16分音符)
+DEFAULT_METER = 4  # 1小節の拍数(4/4)
+SETTING = re.compile(r"^\s*grid_(res|meter)\s+(\S+)", re.M)
 STRING = re.compile(r'"([^"\\\n]*)"')
 GRID_PLAY_OR_CHOP = re.compile(r"\bgrid_(?:play|chop)\b")
 OPERATOR = re.compile(r"\.(?:mask|shift|accent|bar)\s*[(\s]")
@@ -41,17 +43,17 @@ def strip_comment(line: str) -> str:
 
 
 def is_grid(s: str) -> bool:
-    """グリッド文字列らしいか: 使える文字だけで、音符(x X o)を含み、8マス以上。"""
+    """グリッド文字列らしいか: 使える文字だけで、音符(x X o)を含み、6マス以上。"""
     cells = cells_of(s)
-    return bool(s) and all(c in GRID_CHARS for c in s) and len(cells) >= 8 and any(c in HITS for c in cells)
+    return bool(s) and all(c in GRID_CHARS for c in s) and len(cells) >= 6 and any(c in HITS for c in cells)
 
 
 def cells_of(pattern: str) -> str:
     return "".join(c for c in pattern if c not in " |\t\n")
 
 
-def hit_beats(pattern: str) -> list[float]:
-    """各音の長さ(拍)。音 = x X o、直後に続く - ぶんだけ伸びる。"""
+def hit_beats(pattern: str, res: int = DEFAULT_RES) -> list[float]:
+    """各音の長さ(拍)。音 = x X o、直後に続く - ぶんだけ伸びる。1マス = 1/res 拍。"""
     cells = cells_of(pattern)
     out = []
     for i, c in enumerate(cells):
@@ -59,7 +61,7 @@ def hit_beats(pattern: str) -> list[float]:
             n = 1
             while i + n < len(cells) and cells[i + n] == "-":
                 n += 1
-            out.append(n * STEP)
+            out.append(n / res)
     return out
 
 
@@ -92,12 +94,26 @@ def check(text: str) -> tuple[list[str], list[str]]:
     code_lines = [strip_comment(raw) for raw in lines]
     code = "\n".join(code_lines)
 
-    # 1. グリッド文字列のマス数(16 の倍数)
+    # 0. 解像度と拍子(grid_res / grid_meter)
+    settings: dict[str, list[int]] = {"res": [], "meter": []}
+    for m in SETTING.finditer(code):
+        n = code.count("\n", 0, m.start()) + 1
+        if m.group(2).isdigit() and int(m.group(2)) > 0:
+            settings[m.group(1)].append(int(m.group(2)))
+        else:
+            errors.append(f"{n}行目: grid_{m.group(1)} は正の整数で書く(例: grid_{m.group(1)} {DEFAULT_RES if m.group(1) == 'res' else DEFAULT_METER})")
+    for key, vals in settings.items():
+        if len(set(vals)) > 1:
+            warnings.append(f"grid_{key} が複数の値({', '.join(map(str, vals))})で書かれています(1曲で1つに固定する。違う拍子は別の曲・別のファイルに分ける)")
+    res = settings["res"][-1] if settings["res"] else DEFAULT_RES
+    bar = res * (settings["meter"][-1] if settings["meter"] else DEFAULT_METER)
+
+    # 1. グリッド文字列のマス数(1小節のマス数の倍数)
     for n, line in enumerate(code_lines, 1):
         for m in STRING.finditer(line):
             s = m.group(1)
-            if is_grid(s) and len(cells_of(s)) % 16:
-                errors.append(f"{n}行目: グリッド \"{s}\" は {len(cells_of(s))} マス(1小節 = 16マス。16 の倍数にする)")
+            if is_grid(s) and len(cells_of(s)) % bar:
+                errors.append(f"{n}行目: グリッド \"{s}\" は {len(cells_of(s))} マス(1小節 = {bar}マス。{bar} の倍数にする)")
 
     # 2. grid_chop: from: の個数と範囲
     clips = {m.group(1): float(m.group(2)) for m in re.finditer(r"(\w+)\s*=\s*grid_clip\s+[^,\n]+,\s*([\d.]+)", code)}
@@ -113,7 +129,7 @@ def check(text: str) -> tuple[list[str], list[str]]:
             froms = [float(x) for x in frm.split(",") if x.strip()]
         except ValueError:
             continue  # 数値以外(式など)は検査しない
-        beats = hit_beats(pattern)
+        beats = hit_beats(pattern, res)
         if len(froms) != len(beats):
             errors.append(f"{n}行目: grid_chop の from: は {len(froms)} 個、音は {len(beats)} 個(同じ個数にする)")
             continue

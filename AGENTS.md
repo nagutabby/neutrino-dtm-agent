@@ -51,7 +51,7 @@
 
 拍子に基づいて直感的に書き、人が拡張しやすくするための規約。AI が書くコードも、スタイル①への提案も合わせる(ユーザー自身の書き方があれば優先)。
 
-- **1小節 = 4拍 = 16マス**。リズムはグリッド文字列(`x` ふつう `X` 強 `o` 弱 `.` 休み `-` 伸ばし。空白と `|` は無視。16 の倍数)で書き、`sleep` の足し算で書かない。
+- **既定は 1小節 = 4拍 = 16マス**。リズムはグリッド文字列(`x` ふつう `X` 強 `o` 弱 `.` 休み `-` 伸ばし。空白と `|` は無視。1小節のマス数の倍数)で書き、`sleep` の足し算で書かない。付点8分は3マス(`x--`)。3連符・3/4・6/8 などは、先頭で `grid_res`(1拍のマス数)と `grid_meter`(1小節の拍数)を1曲で1つに固定して書く。
 - **ステムごとの記法**: ドラム・ベース・コード = グリッド(ベース・コードの音程は進行 `grid_prog` の `on:`)/ ボーカルチョップ = グリッド + `from:`(元 wav の拍位置。wav は加工しない)/ メロディ = `[拍の位置, 音名, 長さ]` / FX = 小節単位。ヘルパーは `docs/live-grid.rb`(`current.rb` の先頭に貼る。実装済みは `grid_play` `grid_chop`)。
 - **変数**: リズム・音(`grid_voice`)・進行(`grid_prog`)・元 wav(`grid_clip`)を別々の変数にして先頭にまとめ、再利用する。`define` の名前は `grid_` で始める。
 - **演算(連結・間引き・ずらし)は、ユーザーが求めたとき、または同じ変数を3回以上少しずつ変えて書くときだけ**。使ったら理由を添える。
@@ -154,7 +154,7 @@ Drums → Bass → Chords → Melody →(任意: ボーカル。ボコーダー�
 ## コマンド・スクリプト
 
 - ボーカル用: `neutrino_tune.py <base> [--preset vocoder|robot] [--pitch-lock …]`(調声。中間ファイルを編集し `<名>_tuned_vN.*` を出力)/ `neutrino_sing.py <phrase.json> [--model M]`(JSON → MusicXML → NEUTRINO で wav/f0。出力は `work/vocals/<名>_vN.*`)/ `vocode.py <wav> <f0> --bpm N [--beats 16] [--vibrato 20] [--dynamics] [--attack-beats 1] [--phrase-levels …] [--growl G]`(頭の1小節を捨てて拍数ぶん切り出し、ボコーダー wav を `_voc_vN.wav` で出力。`--vibrato` は音高の揺れ、`--dynamics` は声の強弱、`--attack-beats` は音符ごとの立ち上がり、`--growl` は唸り(ノイズが増えるので既定オフ))
-- `check_grid.py <file.rb> […]`(グリッド記法の規約の検証: マス数が 16 の倍数か、`from:` の個数・範囲、`grid_` の接頭辞、二重の `sleep`、演算の使用。終了コード 0 / 1 警告 / 2 誤り)
+- `check_grid.py <file.rb> […]`(グリッド記法の規約の検証: マス数が1小節のマス数の倍数か、`from:` の個数・範囲、`grid_` の接頭辞、二重の `sleep`、演算の使用。終了コード 0 / 1 警告 / 2 誤り)
 - `check_structure.py [work/structure.md] [--final]`(セクションごとの進行・内容をユーザーと確認したかの検証。終了コード 0 / 1 警告 / 2 誤り)
 - `learning_log.py index|search <語>`(学習ログの索引の作り直し・検索)
 - `live_render.py <files…> --seconds N` / `live_check.py <file.rb>` / `wav_stats.py <wav>` / `wav_to_mp3.py <wav> [-o out.mp3] [--bitrate 256k] [--force]` / `sonicpi.py synths|fx [名前]` / `play.sh <wav>` / `setup.sh`。

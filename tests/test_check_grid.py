@@ -61,3 +61,47 @@ def test_operators_are_warned():
     text = f'use_bpm 150\na = "{BAR}"\nb = a.mask("{BAR}")\nc = "{BAR}" + "{BAR}"\n'
     _, w = cg.check(text)
     assert len([m for m in w if "演算" in m or "連結" in m]) == 2
+
+
+def loop(body: str) -> str:
+    return f"use_bpm 120\n{body}\nlive_loop :a do\n  grid_play k, x\nend\n"
+
+
+def test_dotted_eighth_fits_default_grid():
+    assert cg.hit_beats("x-- x-- x-- x-- x-- x-. .... ....") == [0.75] * 5 + [0.5]
+
+
+def test_meter_3_makes_a_bar_12_cells():
+    ok = loop('grid_meter 3\nx = "x... x... x..."')
+    assert cg.check(ok) == ([], [])
+    e, _ = cg.check(loop('grid_meter 3\nx = "x... x... x... x..."'))
+    assert any("16 マス(1小節 = 12マス" in m for m in e)
+
+
+def test_meter_5_and_res_3_triplets():
+    assert cg.check(loop('grid_meter 5\nx = "x... x... x... x... x..."')) == ([], [])
+    assert cg.check(loop('grid_res 3\nx = "x.. x.. x.. x.."')) == ([], [])  # 4/4 の8分3連 = 12マス
+    e, _ = cg.check(loop('grid_res 3\nx = "x... x... x... x..."'))
+    assert any("1小節 = 12マス" in m for m in e)
+
+
+def test_six_eight_is_res_2_meter_3():
+    assert cg.check(loop('grid_res 2\ngrid_meter 3\nx = "x.x.x. x.x.x."')) == ([], [])
+
+
+def test_hit_beats_follow_resolution():
+    assert cg.hit_beats("x-. x..", res=3) == [2 / 3, 1 / 3]
+    assert cg.hit_beats("x.. x-.", res=2) == [0.5, 1.0]
+
+
+def test_chop_range_uses_resolution():
+    text = 'grid_res 2\ngrid_meter 3\nv = grid_clip "a.wav", 3\nlive_loop :v do\n  grid_chop v, "x-x.x-", from: [0, 2, 2.5]\nend\nuse_bpm 100\n'
+    e, _ = cg.check(text)
+    assert any("3 番目" in m and "はみ出す" in m for m in e)
+
+
+def test_invalid_or_conflicting_settings():
+    e, _ = cg.check("use_bpm 100\ngrid_res 0\n")
+    assert any("正の整数" in m for m in e)
+    _, w = cg.check("use_bpm 100\ngrid_meter 3\ngrid_meter 4\n")
+    assert any("grid_meter が複数" in m for m in w)
