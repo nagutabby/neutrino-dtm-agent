@@ -1,5 +1,5 @@
 # グリッド記法のデモ(4小節ループ。BPM150 / Fマイナー)。先頭に docs/live-grid.rb の define 部分を貼って使う。
-# 規約: docs/coding-rules.md / 検証: uv run scripts/check_grid.py examples/grid_demo.rb
+# 規約: docs/coding-rules.md / 検証: uv run scripts/live_check.py examples/grid_demo.rb
 use_bpm 150
 
 # --- リズム(いつ鳴らすか)---

@@ -1,25 +1,25 @@
-import check_grid as cg
+import live_check as cg
 
 BAR = "x... x... x... x..."
 
 
 def test_good_demo_has_no_problems():
     text = f'use_bpm 150\nfour = "{BAR}"\nlive_loop :kick do\n  grid_play kick, four\nend\n'
-    assert cg.check(text) == ([], [])
+    assert cg.check_grid(text) == ([], [])
 
 
 def test_grid_must_be_multiple_of_16_cells():
-    e, _ = cg.check('use_bpm 150\nx = "x... x... x..."\nlive_loop :a do\n  grid_play k, x\nend\n')
+    e, _ = cg.check_grid('use_bpm 150\nx = "x... x... x..."\nlive_loop :a do\n  grid_play k, x\nend\n')
     assert any("12 マス" in m for m in e)
 
 
 def test_separators_and_comments_are_ignored():
     text = f'use_bpm 150\nx = "{BAR} | {BAR}" # "x..." はコメント\nlive_loop :a do\n  grid_play k, x\nend\n'
-    assert cg.check(text) == ([], [])
+    assert cg.check_grid(text) == ([], [])
 
 
 def test_non_grid_strings_are_not_checked():
-    assert cg.check('puts "..."\nputs "x"\nputs "xo"\n') == ([], [])
+    assert cg.check_grid('puts "..."\nputs "x"\nputs "xo"\n') == ([], [])
 
 
 def test_hit_beats_counts_ties():
@@ -28,38 +28,38 @@ def test_hit_beats_counts_ties():
 
 def test_chop_from_count_must_match_hits():
     text = 'use_bpm 150\nv = grid_clip "a.wav", 16\nlive_loop :v do\n  grid_chop v, "x--- x--- X--- x-o-", from: [0, 1, 2]\nend\n'
-    e, _ = cg.check(text)
+    e, _ = cg.check_grid(text)
     assert any("3 個、音は 5 個" in m for m in e)
 
 
 def test_chop_from_must_stay_inside_clip():
     text = 'use_bpm 150\nv = grid_clip "a.wav", 4\nlive_loop :v do\n  grid_chop v, "x--- x---", from: [0, 3.5]\nend\n'
-    e, _ = cg.check(text)
+    e, _ = cg.check_grid(text)
     assert any("はみ出す" in m for m in e)
 
 
 def test_chop_with_variable_pattern_is_resolved():
     text = 'use_bpm 150\nv = grid_clip "a.wav", 16\np = "x--- x--- x--- x---"\nlive_loop :v do\n  grid_chop v, p, from: [0, 4, 8]\nend\n'
-    e, _ = cg.check(text)
+    e, _ = cg.check_grid(text)
     assert any("3 個、音は 4 個" in m for m in e)
 
 
 def test_define_needs_grid_prefix_and_loops_must_not_double_sleep():
     text = 'use_bpm 150\ndefine :on_air do\nend\nlive_loop :a do\n  grid_play k, x\n  sleep 1\nend\n'
-    _, w = cg.check(text)
+    _, w = cg.check_grid(text)
     assert any("on_air" in m for m in w) and any("sleep は要りません" in m for m in w)
 
 
 def test_use_bpm_missing_or_duplicated():
-    _, w = cg.check('live_loop :a do\n  sleep 1\nend\n')
+    _, w = cg.check_grid('live_loop :a do\n  sleep 1\nend\n')
     assert any("use_bpm がありません" in m for m in w)
-    _, w = cg.check('use_bpm 120\nuse_bpm 150\n')
+    _, w = cg.check_grid('use_bpm 120\nuse_bpm 150\n')
     assert any("2 箇所" in m for m in w)
 
 
 def test_operators_are_warned():
     text = f'use_bpm 150\na = "{BAR}"\nb = a.mask("{BAR}")\nc = "{BAR}" + "{BAR}"\n'
-    _, w = cg.check(text)
+    _, w = cg.check_grid(text)
     assert len([m for m in w if "演算" in m or "連結" in m]) == 2
 
 
@@ -73,20 +73,20 @@ def test_dotted_eighth_fits_default_grid():
 
 def test_meter_3_makes_a_bar_12_cells():
     ok = loop('grid_meter 3\nx = "x... x... x..."')
-    assert cg.check(ok) == ([], [])
-    e, _ = cg.check(loop('grid_meter 3\nx = "x... x... x... x..."'))
+    assert cg.check_grid(ok) == ([], [])
+    e, _ = cg.check_grid(loop('grid_meter 3\nx = "x... x... x... x..."'))
     assert any("16 マス(1小節 = 12マス" in m for m in e)
 
 
 def test_meter_5_and_res_3_triplets():
-    assert cg.check(loop('grid_meter 5\nx = "x... x... x... x... x..."')) == ([], [])
-    assert cg.check(loop('grid_res 3\nx = "x.. x.. x.. x.."')) == ([], [])  # 4/4 の8分3連 = 12マス
-    e, _ = cg.check(loop('grid_res 3\nx = "x... x... x... x..."'))
+    assert cg.check_grid(loop('grid_meter 5\nx = "x... x... x... x... x..."')) == ([], [])
+    assert cg.check_grid(loop('grid_res 3\nx = "x.. x.. x.. x.."')) == ([], [])  # 4/4 の8分3連 = 12マス
+    e, _ = cg.check_grid(loop('grid_res 3\nx = "x... x... x... x..."'))
     assert any("1小節 = 12マス" in m for m in e)
 
 
 def test_six_eight_is_res_2_meter_3():
-    assert cg.check(loop('grid_res 2\ngrid_meter 3\nx = "x.x.x. x.x.x."')) == ([], [])
+    assert cg.check_grid(loop('grid_res 2\ngrid_meter 3\nx = "x.x.x. x.x.x."')) == ([], [])
 
 
 def test_hit_beats_follow_resolution():
@@ -96,35 +96,35 @@ def test_hit_beats_follow_resolution():
 
 def test_chop_range_uses_resolution():
     text = 'grid_res 2\ngrid_meter 3\nv = grid_clip "a.wav", 3\nlive_loop :v do\n  grid_chop v, "x-x.x-", from: [0, 2, 2.5]\nend\nuse_bpm 100\n'
-    e, _ = cg.check(text)
+    e, _ = cg.check_grid(text)
     assert any("3 番目" in m and "はみ出す" in m for m in e)
 
 
 def test_invalid_or_conflicting_settings():
-    e, _ = cg.check("use_bpm 100\ngrid_res 0\n")
+    e, _ = cg.check_grid("use_bpm 100\ngrid_res 0\n")
     assert any("正の整数" in m for m in e)
-    _, w = cg.check("use_bpm 100\ngrid_meter 3\ngrid_meter 4\n")
+    _, w = cg.check_grid("use_bpm 100\ngrid_meter 3\ngrid_meter 4\n")
     assert any("grid_meter が複数" in m for m in w)
 
 
 def test_digit_levels_are_hits_but_digit_only_strings_are_not_grids():
     assert cg.hit_beats("9363 9363 9363 ....") == [0.25] * 12
-    assert cg.check('use_bpm 100\nid = "12345678"\n') == ([], [])
-    e, _ = cg.check('use_bpm 100\nx = "9363 9363 9."\n')
+    assert cg.check_grid('use_bpm 100\nid = "12345678"\n') == ([], [])
+    e, _ = cg.check_grid('use_bpm 100\nx = "9363 9363 9."\n')
     assert any("10 マス" in m for m in e)
 
 
 def test_chop_from_same_is_not_counted():
     text = 'use_bpm 100\nv = grid_clip "a.wav", 16\nlive_loop :v do\n  grid_chop v, "X--x --9- ..X- -7--", from: :same, base: 4\nend\n'
-    assert cg.check(text) == ([], [])
+    assert cg.check_grid(text) == ([], [])
 
 
 def test_envelope_words_are_checked_on_grid_voice_and_chop():
     ok = 'use_bpm 100\nlead = grid_voice :synth, :supersaw, env: :stab, release: :long, attack: :instant\n'
-    assert cg.check(ok) == ([], [])
-    e, _ = cg.check('use_bpm 100\nlead = grid_voice :synth, :saw, attack: :quick\n')
+    assert cg.check_grid(ok) == ([], [])
+    e, _ = cg.check_grid('use_bpm 100\nlead = grid_voice :synth, :saw, attack: :quick\n')
     assert any("attack: :quick" in m for m in e)
-    e, _ = cg.check('use_bpm 100\npad = grid_voice :synth, :saw, env: :soft\n')
+    e, _ = cg.check_grid('use_bpm 100\npad = grid_voice :synth, :saw, env: :soft\n')
     assert any("env: :soft" in m for m in e)
-    e, _ = cg.check('use_bpm 100\nlive_loop :v do\n  grid_chop v, "X... X...", release: :huge\nend\n')
+    e, _ = cg.check_grid('use_bpm 100\nlive_loop :v do\n  grid_chop v, "X... X...", release: :huge\nend\n')
     assert any("release: :huge" in m for m in e)

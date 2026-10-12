@@ -1,4 +1,4 @@
-# グリッド記法のヘルパー(Sonic Pi 内蔵のみ)。規約は docs/coding-rules.md、検証は scripts/check_grid.py。
+# グリッド記法のヘルパー(Sonic Pi 内蔵のみ)。規約は docs/coding-rules.md、検証は scripts/live_check.py。
 # 使い方: このファイルの define 部分を current.rb の先頭(use_bpm の次)に貼る。使い方の例は examples/grid_demo.rb。
 # 名前はすべて grid_ で始める(Sonic Pi のコア API の名前と衝突させないため)。
 #
