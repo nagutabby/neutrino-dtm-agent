@@ -18,3 +18,13 @@
 | ボーカル風(ボコーダー) | saw を母音のフォルマント(F1/F2/F3)の `bpf` 3つに通す。子音は短い `noise`/`pnoise`。`docs/vocal-helper.rb` の `vsing` | `res` 0.85、`amp` 比 1 : 0.6 : 0.3。`ring_mod` mix 0.2〜0.4 で機械っぽさ、`reverb` mix 0.3 |
 
 確認: `uv run scripts/sonicpi.py synths [名前]` / `fx [名前]` で内蔵シンセ・FX の引数。`uv run scripts/live_check.py <file.rb>` で名前の検査。
+
+## つまずきメモ(この曲づくりで踏んだもの)
+- `define :at` など、Sonic Pi のコア API の名前を `define` に使うと実行時エラー(`live_check.py` では検出できない)。固有の名前(`on_air`)にする。
+- `with_fx :reverb` には `kill_delay:` は渡せない。`live_check.py` が引数名のミスを検出する。
+- 短い `supersaw`(刻み)は、同じ `amp` でも伸ばした音よりずっとピークが低い(amp 0.9 で -15.7 dBFS、伸ばした 0.7 で -6.5 dBFS)。音の長さを変えたら `amp` も確かめる。
+- `eq` の値は 0.1 単位で効く(低域 +0.25〜0.3 で RMS が約 +5.5 dB)。まず 0.1 前後から。数秒の試験録音で `wav_stats.py` を比べて決める。
+- ノイズの種類: `bnoise`(茶色)は低域に偏る、`pnoise`(ピンク)は中域まで、`cnoise` は明るい。clap は `cnoise` + `pnoise` の組み合わせ。
+- `sleep (a) * b` は紛らわしいので `sleep((a) * b)` と書く。
+- `sample` の `start:` / `finish:`(0〜1)で、長い声や音の一部だけを切り出せる。BPM ぴったりの長さの音なら、拍の位置で刻める。
+- 1つのファイルに複数の構成案を持たせるときは、先頭の `plan = :a` と `case plan` で切り替える。

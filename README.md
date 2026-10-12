@@ -10,6 +10,9 @@
 という流れで、「なぜそう聞こえるか」を理論と数値で学べます。決めるのは常にユーザーです。
 
 - エージェント向けルール: [AGENTS.md](AGENTS.md)(`CLAUDE.md` から参照)
+- **制作スタイルは2つ**: ① 自分でコードを書く(AI は提案と解説)/ ② AI がコードを書く(あなたは聴いて方向を決める)。最初に選び、途中で切り替えられます。
+- 案は**5つ**出し、あなたが選んだ案は、音楽理論に基づく意味と使った技法・用語を [docs/learning-log.md](docs/learning-log.md) に残します(`uv run scripts/learning_log.py search <語>` で検索)。
+- 曲が単調にならないよう、**セクションごとのコード進行と内容を、完成までに必ず聞きます**([docs/structure-template.md](docs/structure-template.md)、検証は `uv run scripts/check_structure.py --final`)。
 - 技法メモ: [docs/live-coding.md](docs/live-coding.md) / [docs/music-theory.md](docs/music-theory.md) / [docs/workflow.md](docs/workflow.md)
 
 ## セットアップ
