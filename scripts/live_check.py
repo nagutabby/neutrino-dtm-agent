@@ -4,7 +4,7 @@
   live_check.py <file.rb> [...]
 
 見るもの: シンセ名(use_synth / synth)・FX 名(with_fx)が内蔵にあるか、同じ行の引数名がそのシンセ/FX の
-引数にあるか、`sleep` の無い live_loop(Sonic Pi がハングする典型)。正規表現による検査なので、
+引数にあるか、`sleep` の無い live_loop(Sonic Pi がハングする典型。docs/live-grid.rb の grid_play / grid_chop は中で sleep するので可)。正規表現による検査なので、
 見落とし・誤検出がありうる(最終判断は Sonic Pi 本体のエラー表示)。問題があれば終了コード 2。
 """
 
@@ -56,7 +56,7 @@ def check(text: str, info: dict) -> list[str]:
                 if depth <= 0 and j > i:
                     break
                 j += 1
-            if not re.search(r"\b(sleep|sync|wait)\b", "\n".join(body)):
+            if not re.search(r"\b(sleep|sync|wait|grid_play|grid_chop)\b", "\n".join(body)):
                 problems.append(f"{i + 1}行目: live_loop に sleep(または sync)がありません。実行するとハングします")
             i = j
         i += 1

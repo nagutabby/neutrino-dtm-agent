@@ -47,6 +47,17 @@
 - **記録**: `work/notes.md` に `つなぎ:` の行で書く。変更したら更新し、切り替えを1行残す。
 - **使い方**: コード進行の5案(`live-structure`)とコードのステム提案(`live-next-stem`)で、選ばれたつなぎ方を使う。使った箇所(どの小節間か)を示す。AI が勝手に足し引きしない。スタイル①は、ユーザーが先に書く方針のまま。
 
+## コードの書き方(規約。詳細は `docs/coding-rules.md`)
+
+拍子に基づいて直感的に書き、人が拡張しやすくするための規約。AI が書くコードも、スタイル①への提案も合わせる(ユーザー自身の書き方があれば優先)。
+
+- **1小節 = 4拍 = 16マス**。リズムはグリッド文字列(`x` ふつう `X` 強 `o` 弱 `.` 休み `-` 伸ばし。空白と `|` は無視。16 の倍数)で書き、`sleep` の足し算で書かない。
+- **ステムごとの記法**: ドラム・ベース・コード = グリッド(ベース・コードの音程は進行 `grid_prog` の `on:`)/ ボーカルチョップ = グリッド + `from:`(元 wav の拍位置。wav は加工しない)/ メロディ = `[拍の位置, 音名, 長さ]` / FX = 小節単位。ヘルパーは `docs/live-grid.rb`(`current.rb` の先頭に貼る。実装済みは `grid_play` `grid_chop`)。
+- **変数**: リズム・音(`grid_voice`)・進行(`grid_prog`)・元 wav(`grid_clip`)を別々の変数にして先頭にまとめ、再利用する。`define` の名前は `grid_` で始める。
+- **演算(連結・間引き・ずらし)は、ユーザーが求めたとき、または同じ変数を3回以上少しずつ変えて書くときだけ**。使ったら理由を添える。
+- `use_bpm` は1箇所。`grid_play` / `grid_chop` は自分で `sleep` するので、その `live_loop` に `sleep` を足さない。
+- 提案の前に `uv run scripts/check_grid.py <file.rb>` を `live_check.py` と一緒に通す(誤りは直してから渡す。警告は結果をそのまま伝える)。
+
 ## 構成の確認(必須。曲を完成させるまでに)
 
 曲が単調にならないよう、**セクションごとのコード進行と内容を、完成までに必ずユーザーに聞く**。スタイル②でも、AI が自分で決めない。
@@ -109,8 +120,8 @@ Drums → Bass → Chords → Melody →(任意: ボーカル。ボコーダー�
 
 - 音は **Sonic Pi の内蔵シンセ・FX・サンプルで鳴らすコード**として提案する。外部の音源・他曲の音声の流用、他人の旋律・歌詞の複製は提案しない。サンプルは Sonic Pi 同梱のものを使ってよい。ユーザーが用意した wav は、ユーザーが `sample` で指しているときだけ扱う。
 - **例外: NEUTRINO で作るボーカル**(下の「ボーカル」節)。エージェントが生成して `work/vocals/` に置く wav を、ボコーダー処理してから `sample` で鳴らす提案に限り認める。
-- `define` の名前は、Sonic Pi のコア API の名前(`at` など)と衝突させない(実行時エラーになるが `live_check.py` では検出できない)。`on_air` のように、固有の名前にする。
-- コードは Sonic Pi で動く形で書く。`live_loop` には必ず `sleep`(または `sync`)を入れる。シンセ・FX・引数名は `uv run scripts/sonicpi.py synths|fx [名前]` で確認し、提案の前に `uv run scripts/live_check.py <file.rb>` を通す(終了コード 2 は直してから渡す)。
+- `define` の名前は、Sonic Pi のコア API の名前(`at` など)と衝突させない(実行時エラーになるが `live_check.py` では検出できない)。`on_air` のように、固有の名前にする(グリッド記法のヘルパーは `grid_` で始める)。
+- コードは Sonic Pi で動く形で書く。`live_loop` には必ず `sleep`(または `sync`。`grid_play` / `grid_chop` は中で `sleep` するので可)を入れる。シンセ・FX・引数名は `uv run scripts/sonicpi.py synths|fx [名前]` で確認し、提案の前に `uv run scripts/live_check.py <file.rb>` と `uv run scripts/check_grid.py <file.rb>`(`docs/coding-rules.md`)を通す(終了コード 2 は直してから渡す)。
 - 既存ファイルの上書きは確認してから。`work/` 配下は git 管理しない(`.gitignore`)。
 - 認証が必要なとき(`gh auth login` など)は、必要なコマンドをユーザーに提示して**ユーザー自身に実行してもらう**。トークン・鍵の値をファイル・ログに書かない。
 
@@ -143,6 +154,7 @@ Drums → Bass → Chords → Melody →(任意: ボーカル。ボコーダー�
 ## コマンド・スクリプト
 
 - ボーカル用: `neutrino_tune.py <base> [--preset vocoder|robot] [--pitch-lock …]`(調声。中間ファイルを編集し `<名>_tuned_vN.*` を出力)/ `neutrino_sing.py <phrase.json> [--model M]`(JSON → MusicXML → NEUTRINO で wav/f0。出力は `work/vocals/<名>_vN.*`)/ `vocode.py <wav> <f0> --bpm N [--beats 16] [--vibrato 20] [--dynamics] [--attack-beats 1] [--phrase-levels …] [--growl G]`(頭の1小節を捨てて拍数ぶん切り出し、ボコーダー wav を `_voc_vN.wav` で出力。`--vibrato` は音高の揺れ、`--dynamics` は声の強弱、`--attack-beats` は音符ごとの立ち上がり、`--growl` は唸り(ノイズが増えるので既定オフ))
+- `check_grid.py <file.rb> […]`(グリッド記法の規約の検証: マス数が 16 の倍数か、`from:` の個数・範囲、`grid_` の接頭辞、二重の `sleep`、演算の使用。終了コード 0 / 1 警告 / 2 誤り)
 - `check_structure.py [work/structure.md] [--final]`(セクションごとの進行・内容をユーザーと確認したかの検証。終了コード 0 / 1 警告 / 2 誤り)
 - `learning_log.py index|search <語>`(学習ログの索引の作り直し・検索)
 - `live_render.py <files…> --seconds N` / `live_check.py <file.rb>` / `wav_stats.py <wav>` / `wav_to_mp3.py <wav> [-o out.mp3] [--bitrate 256k] [--force]` / `sonicpi.py synths|fx [名前]` / `play.sh <wav>` / `setup.sh`。
