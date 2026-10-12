@@ -37,8 +37,3 @@ scripts/play.sh work/renders/current_v1.wav              # 試聴
 |---|---|
 | コード(`scripts/`、`songs/*.rb`、ドキュメントなど) | MIT([LICENSE-MIT](LICENSE-MIT)) |
 | 曲の録音(`songs/*.mp3`) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)(条文: [LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0)) |
-
-- mp3 を使うときのクレジット表記の例: 「Dark Kawaii Future Bass (songs/73_section_v1.mp3) by Hiroto Sasagawa, CC BY 4.0」
-- 曲の音は、Sonic Pi の内蔵シンセ・FX と、同梱のサンプル(CC0)で鳴らしています。
-- 曲の声(ボコーダー)は、歌声合成 [NEUTRINO](https://studio-neutrino.com)(MERROW モデル)で作った歌声を、DSP のボコーダーで処理したものです。声の部分には **NEUTRINO の利用許諾の条件が別に適用されます**。たとえば、声だけを取り出した素材やサンプルライブラリ・音源としての利用、AI・機械学習の学習データや変換元としての利用は、許諾されていません。
-- 声の素材(wav・f0・melspec)はリポジトリに含まれません(`.gitignore` で除外)。曲のコード(`songs/*.rb`)の中の声のパスは、作者の環境のものです。
