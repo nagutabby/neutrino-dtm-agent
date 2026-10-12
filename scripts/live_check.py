@@ -4,7 +4,7 @@
   live_check.py <file.rb> [...]
 
 Sonic Pi の API(誤り): サンプル名(`sample :bd_haus`、`grid_voice :sample, :名前`)・コード名(`chord(:c3, :minor7)`、`[:f3, :minor7]`)・スケール名が
-  内蔵にあるか(config/sonicpi_sounds.json。ファイルが無ければ省く)、シンセ名(use_synth / synth)・FX 名(with_fx)が内蔵にあるか、同じ行の引数名がそのシンセ/FX の
+  内蔵にあるか(config/sonicpi_catalog.json)、シンセ名(use_synth / synth)・FX 名(with_fx)が内蔵にあるか、同じ行の引数名がそのシンセ/FX の
   引数にあるか、`sleep` の無い live_loop(Sonic Pi がハングする典型。grid_play / grid_chop / grid_each / grid_roll /
   grid_ticks / grid_rest は中で sleep するので可)。
 グリッド記法(docs/live-grid.rb):
@@ -136,7 +136,7 @@ def check(text: str, info: dict) -> list[str]:
                 for o in OPT.findall(rest + " "):
                     if o not in allowed and not o.endswith(("_slide", "_slide_shape", "_slide_curve")):
                         problems.append(f"{i}行目: :{name} に引数 {o}: はありません")
-    # サンプル・コード・スケールの名前(config/sonicpi_sounds.json があるときだけ)
+    # サンプル・コード・スケールの名前(カタログに入っているものだけ検査する)
     samples = {n for names in info.get("samples", {}).values() for n in names}
     for i, raw in enumerate(lines, 1):
         line = strip_comment(raw)
@@ -251,7 +251,7 @@ def main() -> None:
     files = sys.argv[1:]
     if not files:
         sys.exit(__doc__)
-    info = {**sonicpi.info(), **sonicpi.sounds()}
+    info = sonicpi.info()
     worst = 0
     for f in files:
         text = Path(f).read_text(encoding="utf-8")

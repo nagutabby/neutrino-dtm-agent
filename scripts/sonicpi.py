@@ -5,7 +5,7 @@
   sonicpi.py fx [名前]        内蔵 FX の一覧(名前を渡すとその引数)
   sonicpi.py samples [グループ]  内蔵サンプルの一覧(グループは bass / bd / drum / elec / hat / loop / perc / sn など。名前の頭の部分)
   sonicpi.py chords | scales  chord / scale に使える名前の一覧
-  sonicpi.py dump-info        Sonic Pi.app から config/sonicpi_synths.json と config/sonicpi_sounds.json を作り直す(バージョンアップ後など)
+  sonicpi.py dump-info        Sonic Pi.app から config/sonicpi_catalog.json(シンセ・FX・サンプル・コード・スケール)を作り直す(バージョンアップ後など)
 
 wav の録音は record()。Sonic Pi にはゼロから wav を書く非リアルタイム(NRT)の仕組みがないため、
 ヘッドレスで起動して実時間で録音する(曲の長さ分の時間がかかる。録音中は実際に音が鳴る)。
@@ -30,23 +30,15 @@ load_dotenv()
 APP = Path(os.environ.get("SONIC_PI_APP", "/Applications/Sonic Pi.app"))
 RECORD_RB = ROOT / "scripts" / "sonicpi_record.rb"
 INFO_RB = ROOT / "scripts" / "sonicpi_info.rb"
-INFO_PATH = ROOT / "config" / "sonicpi_synths.json"
-SOUNDS_PATH = ROOT / "config" / "sonicpi_sounds.json"
+CATALOG_PATH = ROOT / "config" / "sonicpi_catalog.json"
 BOOT_OVERHEAD = 20  # 起動・保存の待ち時間の目安(秒)。タイムアウト計算用
 
 
 def info() -> dict:
-    """Sonic Pi 内蔵シンセ・FX の {synths: {名前: [引数]}, fx: {...}}。"""
-    if not INFO_PATH.is_file():
-        sys.exit("[エラー] config/sonicpi_synths.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)")
-    return json.loads(INFO_PATH.read_text(encoding="utf-8"))
-
-
-def sounds() -> dict:
-    """Sonic Pi 内蔵の {samples: {グループ: [名前]}, chords: [名前], scales: [名前]}。ファイルが無ければ空(検査を省く)。"""
-    if not SOUNDS_PATH.is_file():
-        return {}
-    return json.loads(SOUNDS_PATH.read_text(encoding="utf-8"))
+    """Sonic Pi 内蔵の {synths: {名前: [引数]}, fx: {...}, samples: {グループ: [名前]}, chords: [名前], scales: [名前]}。"""
+    if not CATALOG_PATH.is_file():
+        sys.exit("[エラー] config/sonicpi_catalog.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)")
+    return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
 
 
 def find_app() -> Path | None:
@@ -97,13 +89,13 @@ def cmd_dump_info() -> int:
     if not (find_app() and ruby):
         print("[エラー] Sonic Pi と ruby が必要です", file=sys.stderr)
         return 1
-    for args, path in (([], INFO_PATH), (["sounds"], SOUNDS_PATH)):
-        r = subprocess.run([ruby, str(INFO_RB), *args], capture_output=True, text=True, env={**os.environ, "SONIC_PI_APP": str(APP)})
-        if r.returncode != 0 or not r.stdout.strip():
-            print(r.stderr or "[エラー] 取得できませんでした", file=sys.stderr)
-            return 1
-        path.write_text(r.stdout, encoding="utf-8")
-        print(f"更新: {path.relative_to(ROOT)}")
+    r = subprocess.run([ruby, str(INFO_RB)], capture_output=True, text=True, env={**os.environ, "SONIC_PI_APP": str(APP)})
+    if r.returncode != 0 or not r.stdout.strip():
+        print(r.stderr or "[エラー] 取得できませんでした", file=sys.stderr)
+        return 1
+    CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CATALOG_PATH.write_text(r.stdout, encoding="utf-8")
+    print(f"更新: {CATALOG_PATH.relative_to(ROOT)}")
     return 0
 
 
@@ -120,10 +112,7 @@ def cmd_list(kind: str, name: str | None) -> int:
 
 
 def cmd_sounds(kind: str, name: str | None) -> int:
-    d = sounds()
-    if not d:
-        print("[エラー] config/sonicpi_sounds.json がありません(`uv run scripts/sonicpi.py dump-info` で作る。Sonic Pi が必要)", file=sys.stderr)
-        return 1
+    d = info()
     if kind != "samples":
         print(" ".join(d[kind]))
     elif name:
