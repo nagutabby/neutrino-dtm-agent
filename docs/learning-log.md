@@ -81,6 +81,7 @@
 | L044 | 曲全体の組み立て(define と in_thread)と、最後の音を伸ばし切る | #曲全体の組み立て #song-assembly #define #in_thread #set #get #time-state #変数のスコープ #sustain #release #伸ばし切る #録音スクリプト |
 | L045 | ボーカルチョップ(NEUTRINO → 調声 → ボコーダー → 16分チョップ) | #ボーカルチョップ #vocal-chop #ボコーダー #vocoder #NEUTRINO #調声 #pitch-lock #grid_chop #from #16分 #フォルマント #formant #母音 #vowel #歌声合成 #アルペジオに重ねる |
 | L046 | chiptune の高音を EQ で削る・音量とリバーブの微調整 | #EQ #イコライザー #equalizer #high_shelf #ハイシェルフ #chiptune #帯域 #reverb #amp #微調整 #試験録音 |
+| L047 | Dark Bass へ: 低音管楽器のスタッカート・1オクターブ上の pad・9度つきの pluck | #低音管楽器 #brass #スタッカート #staccato #gate #オクターブ上のpad #pluck #9th #ナインス #EQ #high_shelf #bass-extension #サイドチェイン #amp #cutoff |
 
 **タグ索引**(五十音・アルファベット順)
 
@@ -93,21 +94,23 @@
 | #3度 | L018, L035 |
 | #3連符 | L002 |
 | #4つ打ち | L010 |
-| #9th | L041 |
+| #9th | L041, L047 |
 | #9度 | L041 |
 | #acceleration | L039, L040 |
 | #accent | L019, L038, L040 |
-| #amp | L002, L031, L046 |
+| #amp | L002, L031, L046, L047 |
 | #amp_slide | L004, L028 |
 | #arpeggio | L043 |
 | #attack | L030 |
 | #backbeat | L001, L025 |
 | #bandpass | L015 |
 | #bass | L026 |
+| #bass-extension | L047 |
 | #bass-riff | L003 |
 | #bd_tek | L023 |
 | #blade | L033, L035 |
 | #borrowed-chord | L024 |
+| #brass | L047 |
 | #breakdown | L036 |
 | #build-up | L010, L030, L039, L040, L042 |
 | #call-and-response | L033 |
@@ -124,7 +127,7 @@
 | #control | L004, L028, L033, L040 |
 | #crash | L010 |
 | #crescendo | L035, L036, L039, L042 |
-| #cutoff | L005, L024, L026, L029, L030 |
+| #cutoff | L005, L024, L026, L029, L030, L047 |
 | #cutoff_slide | L010, L042 |
 | #damp | L025 |
 | #define | L020, L044 |
@@ -139,7 +142,7 @@
 | #dynamics | L035 |
 | #env-pad | L024 |
 | #env-stab | L026 |
-| #EQ | L016, L046 |
+| #EQ | L016, L046, L047 |
 | #equalizer | L016, L046 |
 | #fade-in | L029 |
 | #fill | L034 |
@@ -149,7 +152,7 @@
 | #from | L045 |
 | #FX | L038 |
 | #gain-staging | L021 |
-| #gate | L040 |
+| #gate | L040, L047 |
 | #get | L044 |
 | #ghost-note | L037 |
 | #glide | L008, L033 |
@@ -163,7 +166,7 @@
 | #harmony | L018, L035 |
 | #hat_snap | L031, L034 |
 | #hi-hat | L002, L031 |
-| #high_shelf | L016, L046 |
+| #high_shelf | L016, L046, L047 |
 | #hpf | L025, L031 |
 | #i-VI-III-VII | L007 |
 | #in_thread | L028, L040, L044 |
@@ -202,6 +205,7 @@
 | #pitch-drop | L030 |
 | #pitch-lock | L017, L045 |
 | #plan | L020 |
+| #pluck | L047 |
 | #pnoise | L015 |
 | #portamento | L008, L033 |
 | #power-chord | L030 |
@@ -235,7 +239,7 @@
 | #song-assembly | L044 |
 | #square-wave | L043 |
 | #stab | L032, L039 |
-| #staccato | L043 |
+| #staccato | L043, L047 |
 | #start-finish | L019 |
 | #stem追加 | L042 |
 | #stereo-width | L009 |
@@ -276,6 +280,7 @@
 | #アルペジオに重ねる | L045 |
 | #イコライザー | L016, L046 |
 | #イントロ | L013, L029 |
+| #オクターブ上のpad | L047 |
 | #オクターブ重ね | L009 |
 | #キック | L001, L023 |
 | #キックからの距離 | L004, L028 |
@@ -296,12 +301,12 @@
 | #コード進行 | L007, L024, L029, L036 |
 | #コール&レスポンス | L033 |
 | #ゴーストノート | L037 |
-| #サイドチェイン | L004, L028, L033 |
+| #サイドチェイン | L004, L028, L033, L047 |
 | #サイン波 | L027 |
 | #サブドミナント | L007 |
 | #サブベース | L003, L027 |
 | #シンコペーション | L006, L023 |
-| #スタッカート | L043 |
+| #スタッカート | L043, L047 |
 | #スタッター | L034 |
 | #スタブ | L032 |
 | #ステレオ幅 | L009 |
@@ -324,7 +329,7 @@
 | #ドミナント | L007 |
 | #ドロップB | L037, L038 |
 | #ドロップ前 | L039, L040 |
-| #ナインス | L041 |
+| #ナインス | L041, L047 |
 | #ナチュラルマイナー | L024 |
 | #ノイズ | L015, L042 |
 | #ノリ | L006, L031 |
@@ -384,6 +389,7 @@
 | #伸ばし切る | L044 |
 | #低域 | L027 |
 | #低音ピアノ | L032, L036 |
+| #低音管楽器 | L047 |
 | #借用和音 | L024 |
 | #刻み | L019 |
 | #加速 | L039, L040 |
@@ -989,3 +995,15 @@
 - 聴きどころ: chiptune の硬さが和らぎ、こもりすぎていないか(聴いて確認)
 - 課題: `-0.6` を `-0.3` と `-0.9` にして録音し、同じ区間を聴き比べる
 - 関連: L016, L043
+
+### L047 Dark Bass へ: 低音管楽器のスタッカート・1オクターブ上の pad・9度つきの pluck
+- タグ: #低音管楽器 #brass #スタッカート #staccato #gate #オクターブ上のpad #pluck #9th #ナインス #EQ #high_shelf #bass-extension #サイドチェイン #amp #cutoff
+- 日付 / 曲: 2026-10-14 / Dark Bass(旧 Dark Future Bass。`songs/dark_bass.rb`)
+- 決めた人: ユーザーの指示(「chiptuneをなくし、メロディではなくdrop前のbassの延長としてdropに低音系管楽器のスタッカートを入れて。1オクターブ上のpadも重ねて」「drop前の盛り上がりはセブンスコードのpluckに置き換えて。eqで高音域を削る」「dropにもpluckを入れて9thを足して弾いて。padに重ねて」「padをdropでも同じ感じで、build-upからdropにかけては少し小さく」「BPM135」「dark bassとして」)。音色(dsaw)・リズム・EQ の値・音量は AI が決めた
+- 選んだ案: ①管楽器(トロンボーン〜テューバ風)= `dsaw`(`cutoff 82`・`detune 0.08`)を `gate 0.4` で短く切り、bass の1オクターブ上(F3〜)で bass と同じ位置(0・3・6 マス目)+ 4拍目の裏(12 = 5度上、14 = 1オクターブ上)。②pad の1オクターブ上を `supersaw` で重ねる。③ビルドアップは 7th コードの pluck(5〜12 小節目、音量 0.2 → 1.0)、ドロップは 7th + 9度の5音の pluck。どちらも `high_shelf -0.7`(note 84)で高音域を削る。④ドロップの pad は `cutoff 100`(ビルドアップ終盤と同じ)、pad の `amp` は 0.4 → 0.3(-2.5dB)。⑤BPM 130 → 135。声の wav も 135 で作り直した。選ばなかった案: chiptune のメロディとアルペジオ(外した)
+- コード: `grid_play brass, brass_r, on: bass_p, fold: 48, steps: [0, 0, 0, 7, 12]` / `play chord_n + [nine], …`(`nine = 根音 + 14` を和音の最高音の上へ)/ `with_fx :eq, high_shelf: -0.7, high_shelf_note: 84`
+- 意味(理論): bass の延長 = 同じ根音・同じ位置で1オクターブ上の音色を重ねると、低音の「打撃」に輪郭(倍音)が足され、メロディなしでも推進力が出る。5度(+7)と1オクターブ(+12)は、根音と最も協和する音で、コードの色(長・短)を変えずに動きを足せる。9度(根音の14半音上)は 7th コードの上に足す響きのテンション(Fm9 の G など)で、pad に重ねると和音が一段広がる。pluck の高音を削ると、粒が丸くなって pad に溶ける。サイドチェイン(ダッキング)は、キックと同時の管楽器・pluck にはかけない(打点がへこむため)
+- 数値: 通し録音(52)は 121.8 秒、ピーク -3.2 dBFS、RMS -22.9 dBFS。ドロップは RMS -20.7、200Hz 未満 85%(旧 91%)。pluck を足しても RMS はほぼ変わらず(-20.6 → -20.6)、pluck は小さい可能性がある。管楽器の音色は Sonic Pi にないので `dsaw` の近似(未確認)
+- 聴きどころ: ドロップ A の約 29〜57 秒で bass と管楽器のスタッカートが合うか / 約 57〜74 秒で pluck が大きくなっていくか(聴いて確認)
+- 課題: `gate: 0.4` を 0.8 にして、スタッカートが伸びたときの違いを聴く
+- 関連: L041, L042, L043, L046
