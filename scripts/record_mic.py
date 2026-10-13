@@ -2,13 +2,13 @@
 """マイクをキー入力で録音して mp3 にする(ffmpeg + avfoundation。macOS)。
 
   record_mic.py [-o out.mp3] [--device 0] [--list-devices] [--bitrate 192k] [--force]
-                [--bpm N [--count-in 1] [--max-bars 32]]
+                [--bpm N [--count-in 1] [--max-bars 32] [--count-only]]
 
 Enter で録音開始 → もう一度 Enter で停止。出力の既定は work/recordings/rec_vN.mp3(版を進める)。
 初回は、ターミナルにマイクの許可が要る(システム設定 → プライバシーとセキュリティ → マイク)。
 --bpm を付けると、スピーカーからキック(低音のドン)を拍ごとに鳴らす。最初の --count-in 小節ぶんは数えるだけ
 (4拍 × 小節数)で、その次の拍から歌う。キックは録音に入り、あとで melody_from_audio.py が
-拍の位置を求めて低音を削る(横の <名>.json に BPM と数える拍数を残す)。イヤホンだとキックが入らず、拍合わせはできない。
+拍の位置を求めて低音を削る(横の <名>.json に BPM と数える拍数を残す)。--count-only なら数えのキックだけで止まる(叩くリズムを録るとき用)。イヤホンだとキックが入らず、拍合わせはできない。
 ハミング・口笛・単音の楽器向け(メロディの取り出しは melody_from_audio.py)。
 """
 
@@ -79,6 +79,7 @@ def main() -> None:
     ap.add_argument("--bitrate", default="192k", help="mp3 のビットレート(既定 192k)")
     ap.add_argument("--bpm", type=float, help="キックで拍を鳴らす(録音に入り、あとで除去・拍合わせに使う)")
     ap.add_argument("--count-in", type=int, default=1, help="歌う前に数える小節数(既定 1 = 4拍)")
+    ap.add_argument("--count-only", action="store_true", help="数えのキックだけ鳴らして止める(叩いたリズムを録るとき。キックが録音に混ざらない)")
     ap.add_argument("--max-bars", type=int, default=32, help="キックを鳴らす最大の小節数(既定 32)")
     ap.add_argument("--force", action="store_true", help="既存の出力を上書きする")
     a = ap.parse_args()
@@ -103,10 +104,10 @@ def main() -> None:
     if a.bpm:
         if not shutil.which("afplay"):
             sys.exit("[エラー] afplay がありません(macOS のみ)")
-        if not 30 <= a.bpm <= 300 or a.count_in < 1 or a.max_bars < a.count_in + 1:
+        if not 30 <= a.bpm <= 300 or a.count_in < 1 or (not a.count_only and a.max_bars < a.count_in + 1):
             sys.exit("[エラー] --bpm は 30〜300、--count-in は 1 以上、--max-bars は --count-in より大きく")
         kick_wav = Path(tempfile.mkdtemp()) / "kick.wav"
-        write_wav(kick_wav, kick_track(a.bpm, a.max_bars))
+        write_wav(kick_wav, kick_track(a.bpm, a.count_in if a.count_only else a.max_bars))
     print(f"出力: {dst}\nEnter で録音開始(Sonic Pi を鳴らすなら、音が入らないようイヤホンで)。Ctrl+C で中止")
     try:
         input()
