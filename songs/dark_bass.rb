@@ -1061,6 +1061,12 @@ define :grid_song_outro do
   # 1回だけ鳴らして止まる(stop)。reverb は最後の和音の余韻まで生かすため、鳴らし終わってから 8拍(約 3.4秒)待つ
   in_thread do  # pad
     1.times do
+        # 全体の音量(level)を、16拍目から 40拍目(アウトロの終わり)まで 24拍かけて 1 → 0 へ下げる。リバーブの外にかけるので、余韻の尾も一緒に小さくなって、無音で終わる
+        with_fx :level, amp: 1, amp_slide: 24 do |fade_fx|
+        in_thread do
+          sleep 16
+          control fade_fx, amp: 0
+        end
         with_fx :reverb, room: 1, mix: 0.7, damp: 0.4 do
           grid_each(pad_r) do |i, len, lvl, c|
             bar = i / grid_bar_cells
@@ -1073,6 +1079,7 @@ define :grid_song_outro do
             with_synth(pad[:name]) { play pad_p[chord_i], opts }
           end
           sleep 8
+        end
         end
     end
   end
