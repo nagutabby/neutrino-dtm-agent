@@ -557,6 +557,36 @@ define :grid_song_dropA do
         end
     end
   end
+  # --- リードシンセ(ビルドと同じ弾き方): メロディにはせず、F ナチュラルマイナーの音階を1つか2つ(度)ずつ動かして進む ---
+  # 4小節ごとに、音がだんだん短くなる: 1〜2小節目は1音を4拍伸ばし、3小節目は2拍 × 2音、4小節目は1拍 × 4音で、終わりに向かって下がり、最後は F マイナーのサブドミナント(IV)の音 Bb4 で終わる。1周8音(C5 → Db5 → F5 → Eb5 → G5 → Eb5 → C5 → Bb4)。次の周の C5(Fm7 の5度)へ1度上がってつながる。ドロップBは4小節 × 4周
+  # 音色はビルドと同じ: dsaw(わずかにずらした2本の鋸波)+ 音の5度下(音階の外なら4度下)を足したパワーコード + 1オクターブ下の単音(0.1拍遅れ)。短いリバーブ。
+  # 4拍の音はビルドと同じ立ち上がり 0.5拍・リリース 1拍。2拍の音は 0.25拍・0.5拍、1拍の音は 0.1拍・0.3拍
+  lead_scale = [:f4, :g4, :ab4, :bb4, :c5, :db5, :eb5, :f5, :g5, :ab5, :bb5]   # F ナチュラルマイナー(0 = F4 … 6 = Eb5 … 9 = Ab5)
+  lead_idx = [4, 5, 7, 6, 8, 6, 4, 3]   # 音階の何番目を鳴らすか。となり合う音は 1つか2つ違い
+  lead_pcs = [5, 7, 8, 10, 0, 1, 3]   # F G Ab Bb C Db Eb の音名の種類(C=0)
+  lead_amp = 0.3
+  lead_r = "X--- ---- ---- ---- | X--- ---- ---- ---- | X--- ---- X--- ---- | X--- X--- X--- X---"
+  in_thread do  # lead_top
+    4.times do
+        with_fx :reverb, room: 0.55, mix: 0.35, damp: 0.7 do
+          k = 0
+          grid_each(lead_r) do |i, len, lvl, c|
+            top = note(lead_scale[lead_idx[k]])
+            k += 1
+            low = lead_pcs.include?((top - 7) % 12) ? top - 7 : top - 5
+            att = len >= 16 ? 0.5 : (len >= 8 ? 0.25 : 0.1)   # 4拍 / 2拍 / 1拍
+            rel = len >= 16 ? 1.0 : (len >= 8 ? 0.5 : 0.3)
+            sus = [len * grid_step - att - rel, 0.05].max
+            with_synth(:dsaw) do
+              play [low, top], amp: lead_amp, attack: att, sustain: sus, release: rel, cutoff: 100, detune: 0.15, pan: 0.3
+              time_warp 0.1 do
+                play top - 12, amp: lead_amp * 0.7, attack: att, sustain: sus, release: rel, cutoff: 100, detune: 0.15, pan: 0.15
+              end
+            end
+          end
+        end
+    end
+  end
   # --- 声のチョップのリズム(1小節に 6発。1・3・4・6・9・13 マス目)---
   arp_bar = ".o.o x.x. .o.. .o.."
   arp_r = ([arp_bar] * 4).join(" | ")
@@ -937,6 +967,36 @@ define :grid_song_dropB do
             nine -= 12 while nine - 12 > chord_n.max
             with_synth(pluck[:name]) { play chord_n + [nine], pluck[:opts].merge(amp: pluck[:opts][:amp] * lvl) }
           end
+          end
+        end
+    end
+  end
+  # --- リードシンセ(ビルドと同じ弾き方): メロディにはせず、F ナチュラルマイナーの音階を1つか2つ(度)ずつ動かして進む ---
+  # 4小節ごとに、音がだんだん短くなる: 1〜2小節目は1音を4拍伸ばし、3小節目は2拍 × 2音、4小節目は1拍 × 4音で、終わりに向かって下がり、最後は F マイナーのサブドミナント(IV)の音 Bb4 で終わる。1周8音(C5 → Db5 → F5 → Eb5 → G5 → Eb5 → C5 → Bb4)。次の周の C5(Fm7 の5度)へ1度上がってつながる。ドロップBは4小節 × 4周
+  # 音色はビルドと同じ: dsaw(わずかにずらした2本の鋸波)+ 音の5度下(音階の外なら4度下)を足したパワーコード + 1オクターブ下の単音(0.1拍遅れ)。短いリバーブ。
+  # 4拍の音はビルドと同じ立ち上がり 0.5拍・リリース 1拍。2拍の音は 0.25拍・0.5拍、1拍の音は 0.1拍・0.3拍
+  lead_scale = [:f4, :g4, :ab4, :bb4, :c5, :db5, :eb5, :f5, :g5, :ab5, :bb5]   # F ナチュラルマイナー(0 = F4 … 6 = Eb5 … 9 = Ab5)
+  lead_idx = [4, 5, 7, 6, 8, 6, 4, 3] * 4   # 音階の何番目を鳴らすか。となり合う音は 1つか2つ違い
+  lead_pcs = [5, 7, 8, 10, 0, 1, 3]   # F G Ab Bb C Db Eb の音名の種類(C=0)
+  lead_amp = 0.3
+  lead_r = "X--- ---- ---- ---- | X--- ---- ---- ---- | X--- ---- X--- ---- | X--- X--- X--- X--- | X--- ---- ---- ---- | X--- ---- ---- ---- | X--- ---- X--- ---- | X--- X--- X--- X--- | X--- ---- ---- ---- | X--- ---- ---- ---- | X--- ---- X--- ---- | X--- X--- X--- X--- | X--- ---- ---- ---- | X--- ---- ---- ---- | X--- ---- X--- ---- | X--- X--- X--- X---"
+  in_thread do  # lead_top
+    1.times do
+        with_fx :reverb, room: 0.55, mix: 0.35, damp: 0.7 do
+          k = 0
+          grid_each(lead_r) do |i, len, lvl, c|
+            top = note(lead_scale[lead_idx[k]])
+            k += 1
+            low = lead_pcs.include?((top - 7) % 12) ? top - 7 : top - 5
+            att = len >= 16 ? 0.5 : (len >= 8 ? 0.25 : 0.1)   # 4拍 / 2拍 / 1拍
+            rel = len >= 16 ? 1.0 : (len >= 8 ? 0.5 : 0.3)
+            sus = [len * grid_step - att - rel, 0.05].max
+            with_synth(:dsaw) do
+              play [low, top], amp: lead_amp, attack: att, sustain: sus, release: rel, cutoff: 100, detune: 0.15, pan: 0.3
+              time_warp 0.1 do
+                play top - 12, amp: lead_amp * 0.7, attack: att, sustain: sus, release: rel, cutoff: 100, detune: 0.15, pan: 0.15
+              end
+            end
           end
         end
     end
