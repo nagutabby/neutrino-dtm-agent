@@ -18,7 +18,7 @@
 | ステム | 記法 | ヘルパー |
 |---|---|---|
 | キック・スネア・ハイハット・クラップ | グリッド | `grid_play` |
-| ベース | グリッド(リズム)+ 進行(音程)。進行の根音を鳴らす | `grid_play ..., on: 進行` |
+| ベース | グリッド(リズム)+ 進行(音程)。進行の根音を鳴らす(種類は読まない。根音だけの進行でよい) | `grid_play ..., on: 進行` |
 | コード | グリッド(刻む位置)+ 進行。`chord: true` でコード全体 | `grid_play ..., on: 進行, chord: true` |
 | ボーカルチョップ | グリッド(鳴らす位置)+ `from:`(元 wav の拍位置)。元の wav は加工しない | `grid_chop` |
 | メロディ・リード | `[拍の位置, 音名, 長さ]` の並び(`sleep` の足し算を書かない)。休符は書かない | (規約のみ。ヘルパーは未実装) |
@@ -28,7 +28,7 @@
 ### ヘルパー関数の一覧(`docs/live-grid.rb`。どれもパターン・指定した長さぶん `sleep` する)
 | 関数 | 使いどころ |
 |---|---|
-| `grid_play voice, pattern, on:, chord:, steps:, fold:, note:` | 音を鳴らす。`on:` 進行の根音(`chord: true` でコード)/ `steps:` 根音に足す半音数の並び / `fold:` 音域を12半音に収める |
+| `grid_play voice, pattern, on:, chord:, steps:, fold:, note:` | 音を鳴らす。`on:` 進行の根音(`chord: true` でコード。コードには進行に種類が要る)/ `steps:` 根音に足す半音数の並び / `fold:` 音域を12半音に収める |
 | `grid_chop clip, pattern, from:, base:` | 元の wav の切り貼り。`from: :same` は鳴らす位置と同じ元の位置を使う(`base:` で拍ぶんずらす) |
 | `grid_roll voice, 回数, 拍数, amp0:, amp_step:, rate0:, rate_step:` | ロール・連打(だんだん強く・速く) |
 | `grid_each pattern do \|位置, 長さ, 強さ, 文字\| … end` | 音ごとに自分で書く(複雑な音色・FX・アクセントの計算用) |
@@ -43,7 +43,7 @@
 
 ## 3. 変数と名前
 - リズム・音・進行を **別々の変数** にして、`live_loop` の中では参照するだけにする。定義はファイルの先頭にまとめる。
-  - リズム: 形が分かる名前(`four`、`offbeat`、`stab`)/ 音: `grid_voice`(楽器_性格。`kick`、`bass`、`pad`)/ 進行: `grid_prog`(セクション_p。`verse_p`、`drop_p`)/ 元の wav: `grid_clip`(拍数も渡す)。
+  - リズム: 形が分かる名前(`four`、`offbeat`、`stab`)/ 音: `grid_voice`(楽器_性格。`kick`、`bass`、`pad`)/ 進行: `grid_prog`(セクション_p。`verse_p`、`drop_p`。種類は省略可。ベース用は `grid_prog :eb1, :cb1`、コード用は `[:eb3, :minor7]`)/ 元の wav: `grid_clip`(拍数も渡す)。
 - `define` の名前は **`grid_` で始める**。Sonic Pi のコア API(`at` など)と衝突すると実行時エラーになり、`live_check.py` では検出できない。
 - 同じリズムを別の音に、同じ音を別のリズムに当てられるようにする(音だけ・リズムだけを差し替えるのが1行になる)。
 

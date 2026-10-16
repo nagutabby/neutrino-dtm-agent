@@ -69,9 +69,11 @@ define :grid_voice do |kind, name, opts = {}|
   { kind: kind, name: name, opts: grid_env(opts) }
 end
 
-# コード進行に名前を付ける。1小節に1つ [根音, 種類]。例: grid_prog [:f3, :minor7], [:db3, :major7]
+# コード進行に名前を付ける。1小節に1つ [根音, 種類]。種類は省略できる(根音だけでも、[:eb1] でもよい)。
+#   例: grid_prog [:f3, :minor7], [:db3, :major7]   /   ベース用に根音だけ: grid_prog :eb1, :cb1, :gb1, :db1
+#   種類は chord: true のときだけ読まれる。根音だけを鳴らすベースでは使われない(:minor を書いても音は変わらない)。
 define :grid_prog do |*chords|
-  chords
+  chords.map { |c| c.is_a?(Array) ? c : [c] }
 end
 
 # 元の wav に名前を付ける。path は wav のパス、beats は元の長さ(拍。例: 16 = 4小節)
@@ -136,7 +138,7 @@ define :grid_roll do |voice, hits, beats, o = {}|
 end
 
 # voice を pattern どおりに鳴らす。オプション o:
-#   on: 進行(grid_prog)。小節ごとに根音(既定)またはコード(chord: true)を鳴らす
+#   on: 進行(grid_prog)。小節ごとに根音(既定。種類は読まれない)またはコード(chord: true。種類が必要)を鳴らす
 #   fold: on: の根音を、この音(MIDI 番号)から12半音の範囲に収める(ベースの音域をそろえる。例 29 = F1〜E2)
 #   steps: on: の根音に足す半音数の並び(音ごとに順に使う。例 [0, 0, 7, 12])
 #   note: on: が無いときの音(シンセ用。例 :f2)
@@ -152,6 +154,7 @@ define :grid_play do |voice, pattern, o = {}|
         root = note(root)
         root = grid_fold(root, o[:fold]) if o[:fold]
         root += o[:steps][k % o[:steps].size] if o[:steps]
+        raise "grid: chord: true には進行に種類が必要です(例: [:#{o[:on][(i / grid_bar_cells) % o[:on].size][0]}, :minor7])" if o[:chord] && type.nil?
         n = o[:chord] ? chord(root, type) : root
       else
         n = o[:note]
