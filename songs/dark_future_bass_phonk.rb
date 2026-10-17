@@ -471,7 +471,7 @@ end
 # --- 低音ピアノのリフ（高音ピアノは外した）---
 # :piano はほかのシンセよりずっと大きい。amp は 0.04 前後から始める。vel（弾く強さ）hard（鍵盤の硬さ）を下げて、柔らかく
 # リフ: ベースの根音を 1オクターブ上（Eb2 付近）で弾き、根音 → 根音 → 5度 → オクターブ（→ 5度）と跳ねる。位置はキックの 0・3・6・8・10・14 マスに合わせる。3度は使わない（和音が長調と短調で変わるため）
-piano_lo_amp = 0.24
+piano_lo_amp = 0.28
 lo_pat_bars = ["X..x ..x. X... ..x.",   # 奇数小節: 頭 0 3 6 8 14（キックと同じ）
                "X..x ..x. ..X. ...."]   # 偶数小節: 頭 0 3 6 10
 lo_offsets  = [[0, 0, 7, 12, 7],        # 奇数小節: 根音 根音 5度 オクターブ 5度（半音数）
@@ -529,7 +529,7 @@ end
 # ペダルポイント: 根音 Eb（Eb3 + Bb3 + Eb4）に固定して、ベースが Cb・Ab・Bb に動いても同じ和音を刻み続ける。ギターのように歪ませる。3度がないので、Cbmaj7 の明るさも出ない
 #   頭の X は長く（コードの響きを残す）、x は短く切る（ブリッジミュート風のチャグ）。位置は 0 2 6 8 12 14（キックの 0・6・8・14 と重なる）
 pc_pat = "X.x. ..x. X... x.x."
-pc_amp = 0.25
+pc_amp = 0.2
 with_fx :level, amp: 1 do |sc_power|   # サイドチェイン: power
   live_loop :pump_power do grid_each(sc_pat) { |i, len, lvl, c| grid_pump_hit sc_power, sc_depth, sc_rel } end
 with_fx :reverb, room: 0.5, mix: 0.2 do
@@ -567,7 +567,7 @@ end
 
 # --- 1オクターブ上のピアノ（リフに重ねる）---
 # 低音ピアノのリフと同じ音を、同じリズム（lo_pat）で 1オクターブ上（+12 半音。ベースの根音から数えて +24）に重ねる。音色もベロシティも低音ピアノと同じ
-piano_up_amp = 0.2
+piano_up_amp = 0.24
 with_fx :level, amp: 1 do |sc_pianoup|   # サイドチェイン: pianoup
   live_loop :pump_pianoup do grid_each(sc_pat) { |i, len, lvl, c| grid_pump_hit sc_pianoup, sc_depth, sc_rel } end
 with_fx :reverb, room: 0.9, mix: 0.5, damp: 0.5 do
